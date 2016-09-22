@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"math/rand"
-	"sync/atomic"
 	"time"
 
 	"sync"
@@ -23,29 +22,13 @@ func runTest(url, user string, count int64) {
 	log.Printf("\nTest %s, %d connections.", user, count)
 	srv, _ := test.RunServerWithConfig("./gnatsd.conf")
 
-	var disconnectTime time.Time
-	var reconnectTime time.Time
-
 	opts := nats.DefaultOptions
 	opts.Timeout = time.Second * 600
 	opts.Url = url
 	opts.User = user
 	opts.Password = "password"
 
-	disconnectCount := int64(0)
-
-	opts.DisconnectedCB = func(c *nats.Conn) {
-		if atomic.AddInt64(&disconnectCount, 1) == 1 {
-			disconnectTime = time.Now()
-		}
-	}
-
-	reconnectCount := int64(0)
-
 	opts.ReconnectedCB = func(c *nats.Conn) {
-		if atomic.AddInt64(&reconnectCount, 1) == count {
-			reconnectTime = time.Now()
-		}
 		wg.Done()
 	}
 
@@ -80,13 +63,13 @@ func runTest(url, user string, count int64) {
 	// Bounce the server
 	wg.Add(int(count))
 	srv.Shutdown()
+	disconnectTime := time.Now()
 	srv, _ = test.RunServerWithConfig("./gnatsd.conf")
 	defer srv.Shutdown()
 
 	// wait for all connections to reconnect
 	wg.Wait()
-
-	log.Printf("Total Reconnect time: %v", reconnectTime.Sub(disconnectTime))
+	log.Printf("Total Reconnect time: %v", time.Now().Sub(disconnectTime))
 }
 
 func main() {
