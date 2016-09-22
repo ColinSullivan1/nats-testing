@@ -1,5 +1,3 @@
-
-
 package main
 
 import (
@@ -20,6 +18,7 @@ func usage() {
 }
 
 func runTest(url, user string, count int64) {
+	var wg sync.WaitGroup
 
 	log.Printf("\nTest %s, %d connections.", user, count)
 	srv, _ := test.RunServerWithConfig("./gnatsd.conf")
@@ -41,23 +40,21 @@ func runTest(url, user string, count int64) {
 		}
 	}
 
-	ch := make(chan bool)
 	reconnectCount := int64(0)
 
 	opts.ReconnectedCB = func(c *nats.Conn) {
 		if atomic.AddInt64(&reconnectCount, 1) == count {
 			reconnectTime = time.Now()
-			ch <- true
 		}
+		wg.Done()
 	}
 
 	var connStartTime = time.Now()
 
 	connList := make([]*nats.Conn, 0, count)
-	var wg sync.WaitGroup
 	wg.Add(int(count))
 
-	// create connections simultaneously
+	// create connections simultaneously to make the test complete faster.
 	for i := int64(0); i < count; i++ {
 		go func() {
 			// randomize connect times to prevent connection read errors
@@ -76,17 +73,18 @@ func runTest(url, user string, count int64) {
 		}
 	}()
 
+	// wait for all connections to connect
 	wg.Wait()
-
 	log.Printf("Total Connect time:   %v", time.Now().Sub(connStartTime))
 
+	// Bounce the server
+	wg.Add(int(count))
 	srv.Shutdown()
-
 	srv, _ = test.RunServerWithConfig("./gnatsd.conf")
 	defer srv.Shutdown()
 
 	// wait for all connections to reconnect
-	<-ch
+	wg.Wait()
 
 	log.Printf("Total Reconnect time: %v", reconnectTime.Sub(disconnectTime))
 }
