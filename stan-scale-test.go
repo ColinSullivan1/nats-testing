@@ -27,6 +27,7 @@ const (
 	DefaultIgnoreOld          = false
 	DefaultMaxPubAcksInflight = 1000
 	DefaultClientID           = "benchmark"
+	DefaultConnectWait        = 20 * time.Second
 )
 
 func usage() {
@@ -72,8 +73,8 @@ func getNextNatsConn() *nats.Conn {
 	return nc
 }
 
-var currentSubjCount int = 0
-var useUniqueSubjects bool = false
+var currentSubjCount int
+var useUniqueSubjects bool
 
 func getNextSubject(baseSubject string, max int) string {
 	if !useUniqueSubjects {
@@ -202,10 +203,10 @@ func runPublisher(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs in
 
 	nc := getNextNatsConn()
 	if nc == nil {
-		snc, err = stan.Connect("test-cluster", pubID, stan.MaxPubAcksInflight(maxPubAcksInflight), stan.ConnectWait(time.Second*5))
+		snc, err = stan.Connect("test-cluster", pubID, stan.MaxPubAcksInflight(maxPubAcksInflight), stan.ConnectWait(DefaultConnectWait))
 	} else {
 		snc, err = stan.Connect("test-cluster", pubID,
-			stan.MaxPubAcksInflight(maxPubAcksInflight), stan.NatsConn(nc), stan.ConnectWait(time.Second*5))
+			stan.MaxPubAcksInflight(maxPubAcksInflight), stan.NatsConn(nc), stan.ConnectWait(DefaultConnectWait))
 	}
 	if err != nil {
 		log.Fatalf("Publisher %s can't connect: %v\n", pubID, err)
@@ -239,9 +240,9 @@ func runSubscriber(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs i
 
 	nc := getNextNatsConn()
 	if nc == nil {
-		snc, err = stan.Connect("test-cluster", subID, stan.ConnectWait(time.Second*5))
+		snc, err = stan.Connect("test-cluster", subID, stan.ConnectWait(DefaultConnectWait))
 	} else {
-		snc, err = stan.Connect("test-cluster", subID, stan.NatsConn(nc), stan.ConnectWait(time.Second*5))
+		snc, err = stan.Connect("test-cluster", subID, stan.NatsConn(nc), stan.ConnectWait(DefaultConnectWait))
 	}
 	if err != nil {
 		log.Fatalf("Subscriber %s can't connect: %v\n", subID, err)
