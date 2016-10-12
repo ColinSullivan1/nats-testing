@@ -124,7 +124,7 @@ func main() {
 	opts.Secure = *tls
 
 	if err := buildConns(*numConns, &opts); err != nil {
-		log.Fatal("Unable to create connections: %v", err)
+		log.Fatalf("Unable to create connections: %v", err)
 	}
 
 	benchmark = bench.NewBenchmark("NATS Streaming", *numSubs, *numPubs)
@@ -166,7 +166,7 @@ func main() {
 }
 
 func publishMsgs(snc stan.Conn, msg []byte, async bool, numMsgs int, subj string) {
-	var published int = 0
+	var published int
 
 	if async {
 		ch := make(chan bool)
@@ -202,10 +202,10 @@ func runPublisher(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs in
 
 	nc := getNextNatsConn()
 	if nc == nil {
-		snc, err = stan.Connect("test-cluster", pubID, stan.MaxPubAcksInflight(maxPubAcksInflight))
+		snc, err = stan.Connect("test-cluster", pubID, stan.MaxPubAcksInflight(maxPubAcksInflight), stan.ConnectWait(time.Second*5))
 	} else {
 		snc, err = stan.Connect("test-cluster", pubID,
-			stan.MaxPubAcksInflight(maxPubAcksInflight), stan.NatsConn(nc))
+			stan.MaxPubAcksInflight(maxPubAcksInflight), stan.NatsConn(nc), stan.ConnectWait(time.Second*5))
 	}
 	if err != nil {
 		log.Fatalf("Publisher %s can't connect: %v\n", pubID, err)
@@ -239,9 +239,9 @@ func runSubscriber(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs i
 
 	nc := getNextNatsConn()
 	if nc == nil {
-		snc, err = stan.Connect("test-cluster", subID)
+		snc, err = stan.Connect("test-cluster", subID, stan.ConnectWait(time.Second*5))
 	} else {
-		snc, err = stan.Connect("test-cluster", subID, stan.NatsConn(nc))
+		snc, err = stan.Connect("test-cluster", subID, stan.NatsConn(nc), stan.ConnectWait(time.Second*5))
 	}
 	if err != nil {
 		log.Fatalf("Subscriber %s can't connect: %v\n", subID, err)
