@@ -35,7 +35,7 @@ func usage() {
 
 var conns []*nats.Conn
 
-func buildConns(count int, opts *nats.Options) (error){
+func buildConns(count int, opts *nats.Options) error {
 	var err error
 	conns = nil
 	err = nil
@@ -51,10 +51,14 @@ func buildConns(count int, opts *nats.Options) (error){
 	return err
 }
 
-var currentConn int = 0
+var currentConn int
+var connLock sync.Mutex
 
 func getNextNatsConn() *nats.Conn {
+	connLock.Lock()
+
 	if conns == nil {
+		connLock.Unlock()
 		return nil
 	}
 	if currentConn == len(conns) {
@@ -63,6 +67,8 @@ func getNextNatsConn() *nats.Conn {
 	nc := conns[currentConn]
 	currentConn++
 
+	connLock.Unlock()
+
 	return nc
 }
 
@@ -70,9 +76,9 @@ var currentSubjCount int = 0
 var useUniqueSubjects bool = false
 
 func getNextSubject(baseSubject string, max int) string {
-    if !useUniqueSubjects {
-	    return baseSubject
-    }
+	if !useUniqueSubjects {
+		return baseSubject
+	}
 	rv := fmt.Sprintf("%s.%d", baseSubject, currentSubjCount)
 	currentSubjCount++
 	if currentSubjCount == max {
@@ -141,7 +147,7 @@ func main() {
 	pubCounts := bench.MsgsPerClient(*numMsgs, *numPubs)
 	for i := 0; i < *numPubs; i++ {
 		pubID := fmt.Sprintf("%s-pub-%d", *clientID, i)
-                go runPublisher(&startwg, &donewg, opts, pubCounts[i], *messageSize, *async, pubID, *maxPubAcks, args[0], *numSubs)
+		go runPublisher(&startwg, &donewg, opts, pubCounts[i], *messageSize, *async, pubID, *maxPubAcks, args[0], *numSubs)
 	}
 
 	log.Printf("Starting benchmark [msgs=%d, msgsize=%d, pubs=%d, subs=%d]\n", *numMsgs, *messageSize, *numPubs, *numSubs)
@@ -216,7 +222,7 @@ func runPublisher(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs in
 
 	if useUniqueSubjects {
 		for i := 0; i < numSubs; i++ {
-		publishMsgs(snc, msg, async, numMsgs, fmt.Sprintf("%s.%d",subj, i))
+			publishMsgs(snc, msg, async, numMsgs, fmt.Sprintf("%s.%d", subj, i))
 		}
 	} else {
 		publishMsgs(snc, msg, async, numMsgs, subj)
