@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -16,10 +17,12 @@ func usage() {
 	log.Fatalf("Usage: nats-connect [-s server] [-c count] [-u username]\n")
 }
 
+var csvOutput *bool
+var doReconnect *bool
+
 func runTest(url, user string, count int64) {
 	var wg sync.WaitGroup
 
-	log.Printf("\nTest %s, %d connections.", user, count)
 	srv, _ := test.RunServerWithConfig("./gnatsd.conf")
 
 	opts := nats.DefaultOptions
@@ -58,33 +61,64 @@ func runTest(url, user string, count int64) {
 
 	// wait for all connections to connect
 	wg.Wait()
-	log.Printf("Total Connect time:   %v", time.Now().Sub(connStartTime))
+	totalConnectTime := time.Now().Sub(connStartTime)
+
+	var reconnectWaitTime time.Duration
 
 	// Bounce the server
-	wg.Add(int(count))
-	srv.Shutdown()
-	disconnectTime := time.Now()
-	srv, _ = test.RunServerWithConfig("./gnatsd.conf")
+	if *doReconnect {
+		wg.Add(int(count))
+
+		srv.Shutdown()
+		disconnectTime := time.Now()
+		srv, _ = test.RunServerWithConfig("./gnatsd.conf")
+
+		// wait for all connections to reconnect
+		wg.Wait()
+		reconnectWaitTime = time.Now().Sub(disconnectTime)
+	}
 	defer srv.Shutdown()
 
-	// wait for all connections to reconnect
-	wg.Wait()
-	log.Printf("Total Reconnect time: %v", time.Now().Sub(disconnectTime))
+	if *csvOutput {
+		log.Printf("%s,%f", user, totalConnectTime.Seconds())
+	} else {
+		if *doReconnect {
+			log.Printf("user=%s, connect time=%v, reconnect time=%v",
+				user, totalConnectTime, reconnectWaitTime)
+		} else {
+			log.Printf("user=%s, connect time=%v",
+				user, totalConnectTime)
+		}
+	}
 }
 
 func main() {
 	var url = flag.String("s", "nats://localhost:4442", "The nats server URLs (separated by comma)")
 	var count = flag.Int("c", 50, "# of connections")
+	csvOutput = flag.Bool("csv", false, "csv output")
+	doReconnect = flag.Bool("rc", false, "do reconnect")
 
 	log.SetFlags(0)
 	flag.Usage = usage
 	flag.Parse()
 
+	fmt.Printf("Connections: %d\n", *count)
+
 	runTest(*url, "cost_0", int64(*count))
 	runTest(*url, "cost_4", int64(*count))
 	runTest(*url, "cost_8", int64(*count))
+	runTest(*url, "cost_9", int64(*count))
+	runTest(*url, "cost_10", int64(*count))
 	runTest(*url, "cost_11", int64(*count))
+	runTest(*url, "cost_12", int64(*count))
+	runTest(*url, "cost_13", int64(*count))
+	runTest(*url, "cost_14", int64(*count))
+	runTest(*url, "cost_15", int64(*count))
 	runTest(*url, "cost_16", int64(*count))
+	runTest(*url, "cost_17", int64(*count))
+	runTest(*url, "cost_18", int64(*count))
+	runTest(*url, "cost_19", int64(*count))
+	runTest(*url, "cost_20", int64(*count))
 
 	log.Println("Done.")
 }
