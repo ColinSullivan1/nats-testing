@@ -10,7 +10,7 @@ The NATS server password utility default is 11 at the time of this test.
 Command used to generate password:
 ` go run mkpasswd.go -c <count> -p`, password is `password`
 
-**Total Connect time** is the total amount of time taken for all connections to connect somewhat simultaneously to the server.  There is a random wait between 0 and 2 seconds to prevent I/O errors due to resource contraints, so an optimal result should be around 2 seconds when resources are available.
+**Time (seconds) ** is the total amount of time taken for all connections to connect somewhat simultaneously to the server.
 
 Be sure system resources are available.  e.g. `ulimit -n 1024`
 
