@@ -13,10 +13,6 @@ import (
 	"github.com/nats-io/nats"
 )
 
-func usage() {
-	log.Fatalf("Usage: nats-connect [-s server] [-c count] [-u username]\n")
-}
-
 var csvOutput *bool
 var doReconnect *bool
 
@@ -99,12 +95,17 @@ func main() {
 	var count = flag.Int("c", 50, "# of connections")
 	csvOutput = flag.Bool("csv", false, "csv output")
 	doReconnect = flag.Bool("rc", false, "do reconnect")
+	var user = flag.String("u", "", "user name, if not specified, run all")
 
 	log.SetFlags(0)
-	flag.Usage = usage
 	flag.Parse()
 
 	fmt.Printf("Connections: %d\n", *count)
+
+	if *user != "" {
+		runTest(*url, *user, int64(*count))
+		return
+	}
 
 	runTest(*url, "cost_0", int64(*count))
 	runTest(*url, "cost_4", int64(*count))
