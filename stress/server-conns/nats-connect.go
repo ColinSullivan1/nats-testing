@@ -108,6 +108,9 @@ func main() {
 
 	runTest(*url, "cost_0", int64(*count))
 	runTest(*url, "cost_4", int64(*count))
+	runTest(*url, "cost_5", int64(*count))
+	runTest(*url, "cost_6", int64(*count))
+	runTest(*url, "cost_7", int64(*count))
 	runTest(*url, "cost_8", int64(*count))
 	runTest(*url, "cost_9", int64(*count))
 	runTest(*url, "cost_10", int64(*count))
