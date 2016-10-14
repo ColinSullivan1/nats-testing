@@ -53,13 +53,14 @@ Swap:    134107132          0  134107132
 ## Raw Results
 View results in [PFD](./ConnBcryptCostResults.pdf) or [Numbers](./ConnBcryptCostResults.numbers)
 
-## 50 Connections
+## Graphs
+### 50 Connections
 <img src="imgs/50Conns.png" alt="Connections Image" style="width: 600px;"/>
-## 100 Connections
+### 100 Connections
 <img src="imgs/100Conns.png" alt="Connections Image" style="width: 600px;"/>
-## 200 Connections
+### 200 Connections
 <img src="imgs/200Conns.png" alt="Connections Image" style="width: 600px;"/>
-## 500 Connections
+### 500 Connections
 <img src="imgs/500Conns.png" alt="Connections Image" style="width: 600px;"/>
-## 1000 Connections
+### 1000 Connections
 <img src="imgs/1000Conns.png" alt="Connections Image" style="width: 600px;"/>
