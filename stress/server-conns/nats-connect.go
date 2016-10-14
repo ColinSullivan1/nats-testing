@@ -32,7 +32,9 @@ func runTest(url, user string, count int64) {
 	opts.Password = "password"
 
 	opts.ReconnectedCB = func(c *nats.Conn) {
-		wg.Done()
+		if *doReconnect {
+			wg.Done()
+		}
 	}
 
 	var connStartTime = time.Now()
