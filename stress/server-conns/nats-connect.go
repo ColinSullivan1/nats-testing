@@ -9,17 +9,22 @@ import (
 
 	"sync"
 
+	"github.com/nats-io/gnatsd/server"
 	"github.com/nats-io/gnatsd/test"
 	"github.com/nats-io/nats"
 )
 
 var csvOutput *bool
 var doReconnect *bool
+var useLocalServer bool
 
 func runTest(url, user string, count int64) {
 	var wg sync.WaitGroup
+	var srv *server.Server
 
-	srv, _ := test.RunServerWithConfig("./gnatsd.conf")
+	if useLocalServer {
+		srv, _ = test.RunServerWithConfig("./gnatsd.conf")
+	}
 
 	opts := nats.DefaultOptions
 	opts.Timeout = time.Second * 600
@@ -91,7 +96,7 @@ func runTest(url, user string, count int64) {
 }
 
 func main() {
-	var url = flag.String("s", "nats://localhost:4442", "The nats server URLs (separated by comma)")
+	var url = flag.String("s", "", "The nats server URLs (separated by comma)")
 	var count = flag.Int("c", 50, "# of connections")
 	csvOutput = flag.Bool("csv", false, "csv output")
 	doReconnect = flag.Bool("rc", false, "do reconnect")
@@ -105,6 +110,15 @@ func main() {
 	if *user != "" {
 		runTest(*url, *user, int64(*count))
 		return
+	}
+
+	if *url == "" {
+		*url = "nats://localhost:4222"
+		useLocalServer = false
+	}
+
+	if !useLocalServer && *doReconnect {
+		log.Fatalf("Reconnect testing is only supported with a local sever.")
 	}
 
 	runTest(*url, "cost_0", int64(*count))

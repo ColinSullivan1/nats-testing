@@ -90,6 +90,7 @@ func getNextSubject(baseSubject string, max int) string {
 }
 
 var benchmark *bench.Benchmark
+var verbose bool
 
 func main() {
 	var urls = flag.String("s", nats.DefaultURL, "The nats server URLs (separated by comma)")
@@ -105,6 +106,7 @@ func main() {
 	var clientID = flag.String("id", DefaultClientID, "Benchmark process base client ID.")
 	var csvFile = flag.String("csv", "", "Save bench data to csv file")
 	var uniqueSubjs = flag.Bool("us", false, "Use unique subjects")
+	var vb = flag.Bool("v", false, "Verbose")
 
 	log.SetFlags(0)
 	flag.Usage = usage
@@ -116,6 +118,8 @@ func main() {
 	}
 
 	useUniqueSubjects = *uniqueSubjs
+	verbose = *vb
+
 	// Setup the option block
 	opts := nats.DefaultOptions
 	opts.Servers = strings.Split(*urls, ",")
@@ -193,7 +197,6 @@ func publishMsgs(snc stan.Conn, msg []byte, async bool, numMsgs int, subj string
 			published++
 		}
 	}
-
 }
 
 func runPublisher(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs int, msgSize int, async bool, pubID string, maxPubAcksInflight int, subj string, numSubs int) {
@@ -232,6 +235,10 @@ func runPublisher(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs in
 	benchmark.AddPubSample(bench.NewSample(numMsgs, msgSize, start, time.Now(), snc.NatsConn()))
 	snc.Close()
 	donewg.Done()
+
+	if verbose {
+		fmt.Println("Done publishing.")
+	}
 }
 
 func runSubscriber(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs int, msgSize int, ignoreOld bool, subID, subj string) {
@@ -255,6 +262,9 @@ func runSubscriber(startwg, donewg *sync.WaitGroup, opts nats.Options, numMsgs i
 	mcb := func(msg *stan.Msg) {
 		received++
 		if received >= numMsgs {
+			if verbose {
+				fmt.Printf("Done receiving on %s.\n", msg.Subject)
+			}
 			ch <- true
 		}
 	}
