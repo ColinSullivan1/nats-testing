@@ -22,7 +22,7 @@ import (
 
 // Some sane defaults
 const (
-	DefaultConnectWait    = 240 * time.Second
+	DefaultConnectWait    = 4 * time.Minute
 	DefaultConfigFileName = "config.json"
 	UniqueSubject         = "UNIQUE"
 )
@@ -176,7 +176,9 @@ var currentClientID int32
 
 func (c *Client) connect() error {
 	var err error
-	c.sc, err = stan.Connect("test-cluster", c.clientID, stan.NatsConn(c.nc), stan.ConnectWait(DefaultConnectWait))
+	c.sc, err = stan.Connect("test-cluster", c.clientID, stan.NatsConn(c.nc),
+		stan.ConnectWait(DefaultConnectWait), stan.PubAckWait(2*time.Minute),
+		stan.MaxPubAcksInflight(4096))
 	return err
 }
 
@@ -577,6 +579,7 @@ func (cc *ClientManager) PrintActiveClientStatus(ivl int) {
 // PrintReport runs a report of current active clients
 func (cc *ClientManager) PrintReport(activeOnly bool) {
 	var line string
+	var count int
 
 	cc.Lock()
 	defer cc.Unlock()
@@ -609,8 +612,12 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 			}
 		}
 		log.Printf("%s\n", line)
+		count++
 	}
 
+	if activeOnly {
+		log.Printf("%d active clients.\n", count)
+	}
 	log.Printf("\n")
 }
 
