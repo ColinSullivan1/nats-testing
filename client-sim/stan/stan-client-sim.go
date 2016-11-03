@@ -203,7 +203,7 @@ func nextGlobalUniqueSubject() string {
 	return nextUniqueSubject(atomic.AddInt32(&currentSubjectID, 1))
 }
 
-func (c *Client) createClientSubscription(configSub *ClientSubConfig) error {
+func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	csub := &ClientSub{}
 	csub.ch = make(chan bool)
 	csub.max = int32(configSub.Count)
@@ -227,15 +227,13 @@ func (c *Client) createClientSubscription(configSub *ClientSubConfig) error {
 	}
 	stanSub, err := c.sc.Subscribe(csub.subject, mh)
 	if err != nil {
-		return err
+		log.Fatalf("Error creating subscription for %s: %v", csub.subject, err)
 	}
 
 	csub.sub = stanSub
 	c.subs = append(c.subs, csub)
 
 	verbosef("%s: Subscribed to %s.\n", c.clientID, csub.subject)
-
-	return nil
 }
 
 func (c *Client) waitForSubscriptions() {
@@ -254,14 +252,10 @@ func (c *Client) isPublisher() bool {
 	return c.config.PubMsgCount > 0
 }
 
-func (c *Client) createSubscriptions() error {
+func (c *Client) createSubscriptions() {
 	for _, s := range c.config.Subscriptions {
-		if err := c.createClientSubscription(&s); err != nil {
-			return err
-		}
+		c.createClientSubscription(&s)
 	}
-
-	return nil
 }
 
 func (c *Client) closeSubscriptions() {
@@ -388,11 +382,7 @@ func (c *Client) Run() error {
 	verbosef("%s: Connected.", c.clientID)
 
 	if c.isSubscriber() {
-		if err := c.createSubscriptions(); err != nil {
-			return err
-		}
-
-		// in case we are publishing to them.
+		c.createSubscriptions()
 		c.cman.subStartedWg.Done()
 	}
 
@@ -556,14 +546,21 @@ func (cc *ClientManager) RunClients() {
 	for _, c := range cc.clientsMap {
 		go c.Run()
 	}
+	log.Printf("Started all clients.")
 }
 
 // WaitForCompletion waits until all clients have been completed.
-func (cc *ClientManager) WaitForCompletion() {
+func (cc *ClientManager) WaitForCompletion(prIvl int) {
+	log.Printf("Waiting for clients to subscribe.")
 	cc.subStartedWg.Wait()
 	log.Printf("All subscribing clients ready.")
+	if prIvl > 0 {
+		log.Printf("Reporting enabled at %d second intervals.", prIvl)
+		go cc.PrintActiveClientStatus(prIvl)
+	}
+	log.Printf("Waiting for publishers to complete.")
 	cc.pubDoneWg.Wait()
-	log.Printf("All publishers have completed.")
+	log.Printf("All publishers have completed.  Waiting for subscribers.")
 	cc.subDoneWg.Wait()
 	log.Printf("All subscribers have completed.")
 }
@@ -661,10 +658,7 @@ func run(configFile string, vbs bool, tbs bool, prIvl int) {
 
 	cman := NewClientManager(connPool, cfg)
 	cman.RunClients()
-	if prIvl > 0 {
-		go cman.PrintActiveClientStatus(prIvl)
-	}
-	cman.WaitForCompletion()
+	cman.WaitForCompletion(prIvl)
 	cman.PrintReport(false)
 	log.Println("Exiting.")
 }
