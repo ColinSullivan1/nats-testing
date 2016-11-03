@@ -594,9 +594,6 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 		done := c.done
 		c.Unlock()
 
-		if done && activeOnly {
-			continue
-		}
 		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2006-01-02 15:04:05"), c.clientID)
 		if c.isPublisher() {
 			tsent += c.GetPublishCount()
@@ -612,12 +609,15 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 					csub.GetReceivedCount(), csub.max)
 			}
 		}
-		log.Printf("%s\n", line)
+		if !activeOnly || (activeOnly && !done) {
+			log.Printf("%s\n", line)
+		}
 		count++
 	}
 
-	log.Printf("%d clients reported, %d msgs sent, %d msgs received.\n\n",
-		count, tsent, trecv)
+	log.Printf("%d clients reported.", count)
+	log.Printf("%d msgs sent, %d msgs received.\n\n",
+		tsent, trecv)
 }
 
 func disconnectedHandler(nc *nats.Conn) {
@@ -662,7 +662,7 @@ func run(configFile string, vbs bool, tbs bool, prIvl int) {
 	cman.RunClients()
 	cman.WaitForCompletion(prIvl)
 	cman.PrintReport(false)
-	log.Println("Exiting.")
+	log.Println("Test completed.")
 }
 
 func main() {
