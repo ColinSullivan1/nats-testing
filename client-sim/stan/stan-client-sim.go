@@ -577,6 +577,8 @@ func (cc *ClientManager) PrintActiveClientStatus(ivl int) {
 func (cc *ClientManager) PrintReport(activeOnly bool) {
 	var line string
 	var count int
+	var tsent int32
+	var trecv int32
 
 	cc.Lock()
 	defer cc.Unlock()
@@ -597,6 +599,7 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 		}
 		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2006-01-02 15:04:05"), c.clientID)
 		if c.isPublisher() {
+			tsent += c.GetPublishCount()
 			line += fmt.Sprintf(" pub: %s=(%d/%d)", c.config.PublishSubject,
 				c.GetPublishCount(), c.config.PubMsgCount)
 		}
@@ -604,6 +607,7 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 		if c.isSubscriber() {
 			line += " subs:"
 			for _, csub := range c.subs {
+				trecv += csub.GetReceivedCount()
 				line += fmt.Sprintf(" %s=(%d/%d)", csub.subject,
 					csub.GetReceivedCount(), csub.max)
 			}
@@ -612,10 +616,8 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 		count++
 	}
 
-	if activeOnly {
-		log.Printf("%d active clients.\n", count)
-	}
-	log.Printf("\n")
+	log.Printf("%d clients reported, %d msgs sent, %d msgs received.\n\n",
+		count, tsent, trecv)
 }
 
 func disconnectedHandler(nc *nats.Conn) {
