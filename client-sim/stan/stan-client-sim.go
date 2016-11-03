@@ -140,7 +140,7 @@ func (cs *ClientSub) GetReceivedCount() int32 {
 // Client represents a NATS streaming client
 type Client struct {
 	sync.Mutex
-	cman              *ClientManager
+	cm                *ClientManager
 	clientID          string
 	config            *ClientConfig
 	hasUniqueSubjects bool
@@ -160,12 +160,12 @@ type Client struct {
 
 // NewClient returns a new client.
 // TODO:  NATS/Stan options per client, if necessary
-func NewClient(config *ClientConfig, instance int, cman *ClientManager) *Client {
+func NewClient(config *ClientConfig, instance int, cm *ClientManager) *Client {
 	c := &Client{}
-	c.cman = cman
+	c.cm = cm
 	c.config = config
 	c.clientID = fmt.Sprintf("%s-%d", c.config.Name, instance)
-	c.nc = cman.ncPool.GetNextNatsConn()
+	c.nc = cm.ncPool.GetNextNatsConn()
 
 	if c.isPublisher() {
 		c.publishDelay = parsePubRate(c.config.PubRate)
@@ -241,7 +241,7 @@ func (c *Client) waitForSubscriptions() {
 	for _, sub := range c.subs {
 		<-sub.ch
 	}
-	c.cman.subDoneWg.Done()
+	c.cm.subDoneWg.Done()
 	verbosef("%s: All messages received.", c.clientID)
 }
 
@@ -364,7 +364,7 @@ func (c *Client) Publish() {
 			}
 		}
 	}
-	c.payload = c.cman.payloadBuffer[:c.config.PubMsgSize]
+	c.payload = c.cm.payloadBuffer[:c.config.PubMsgSize]
 
 	if c.publishUniqueSubjects() {
 		c.publishUniqueMessages()
@@ -380,7 +380,7 @@ func (c *Client) Publish() {
 
 	verbosef("%s: Publishing complete.\n", c.clientID)
 
-	c.cman.pubDoneWg.Done()
+	c.cm.pubDoneWg.Done()
 }
 
 // GetPublishCount returns the current count of published messages
@@ -391,7 +391,7 @@ func (c *Client) GetPublishCount() int32 {
 // Run connects a client to to the NATS streaming server, starts the subscribers, then
 func (c *Client) Run() error {
 
-	delayMax := c.cman.config.MaxStartDelay
+	delayMax := c.cm.config.MaxStartDelay
 	if delayMax > 0 {
 		d := time.Duration(rand.Intn(delayMax*1000)) * time.Millisecond
 		verbosef("%s:  Delaying start by %v\n", c.clientID, d)
@@ -406,12 +406,12 @@ func (c *Client) Run() error {
 
 	if c.isSubscriber() {
 		c.createSubscriptions()
-		c.cman.subStartedWg.Done()
+		c.cm.subStartedWg.Done()
 	}
 
 	if c.isPublisher() {
 		// wait for all other subscribing clients to start
-		c.cman.subStartedWg.Wait()
+		c.cm.subStartedWg.Wait()
 		c.Publish()
 	}
 
@@ -515,6 +515,9 @@ type ClientManager struct {
 	pubDoneWg     sync.WaitGroup
 	subDoneWg     sync.WaitGroup
 	payloadBuffer []byte
+	perfStartTime time.Time
+	printInterval int
+	longReport    bool
 }
 
 func printClient(c *Client) {
@@ -526,86 +529,104 @@ func printClient(c *Client) {
 }
 
 // NewClientManager creates a client manager
-func NewClientManager(ncPool *NatsServerConnPool, cfg *Config) *ClientManager {
+func NewClientManager(ncPool *NatsServerConnPool, cfg *Config, prIvl int, longReport bool) *ClientManager {
 	var maxMsgSize int
 
-	cc := &ClientManager{}
-	cc.ncPool = ncPool
-	cc.config = cfg
-	cc.clientsMap = make(map[string]*Client)
+	cm := &ClientManager{}
+	cm.ncPool = ncPool
+	cm.config = cfg
+	cm.printInterval = prIvl
+	cm.longReport = longReport
+	cm.clientsMap = make(map[string]*Client)
 
 	for i := 0; i < len(cfg.Clients); i++ {
 		for j := 0; j < cfg.Clients[i].Instances; j++ {
-			cli := NewClient(&cfg.Clients[i], j, cc)
+			cli := NewClient(&cfg.Clients[i], j, cm)
 			if cli.isPublisher() {
-				cc.pubCount++
+				cm.pubCount++
 				if cfg.Clients[i].PubMsgSize > maxMsgSize {
 					maxMsgSize = cfg.Clients[i].PubMsgSize
 				}
 			}
 
 			if cli.isSubscriber() {
-				cc.subCount++
+				cm.subCount++
 			}
 
-			cc.clientsMap[cli.clientID] = cli
+			cm.clientsMap[cli.clientID] = cli
 			printClient(cli)
 		}
 	}
 
-	cc.payloadBuffer = make([]byte, maxMsgSize)
+	cm.payloadBuffer = make([]byte, maxMsgSize)
 
 	log.Printf("Created %d clients:  %d publishing and %d subscribing.\n",
-		len(cc.clientsMap), cc.pubCount, cc.subCount)
+		len(cm.clientsMap), cm.pubCount, cm.subCount)
 
-	return cc
+	return cm
 }
 
 // RunClients runs all the configured clients
-func (cc *ClientManager) RunClients() {
-	cc.subStartedWg.Add(cc.subCount)
-	cc.pubDoneWg.Add(cc.pubCount)
-	cc.subDoneWg.Add(cc.subCount)
+func (cm *ClientManager) RunClients() {
+	cm.subStartedWg.Add(cm.subCount)
+	cm.pubDoneWg.Add(cm.pubCount)
+	cm.subDoneWg.Add(cm.subCount)
 
-	for _, c := range cc.clientsMap {
+	for _, c := range cm.clientsMap {
 		go c.Run()
 	}
 	log.Printf("Started all clients.")
 }
 
 // WaitForCompletion waits until all clients have been completed.
-func (cc *ClientManager) WaitForCompletion(prIvl int) {
+func (cm *ClientManager) WaitForCompletion() {
 	log.Printf("Waiting for clients to subscribe.")
-	cc.subStartedWg.Wait()
+	cm.subStartedWg.Wait()
 	log.Printf("All subscribing clients ready.")
-	if prIvl > 0 {
-		log.Printf("Reporting enabled at %d second intervals.", prIvl)
-		go cc.PrintActiveClientStatus(prIvl)
-	}
+
+	// subscribers are ready and publishing will commence,
+	// so start measuring throughput
+	cm.perfStartTime = time.Now()
+
+	cm.StartActiveClientReporting()
+
 	log.Printf("Waiting for publishers to complete.")
-	cc.pubDoneWg.Wait()
+	cm.pubDoneWg.Wait()
 	log.Printf("All publishers have completed.  Waiting for subscribers.")
-	cc.subDoneWg.Wait()
+	cm.subDoneWg.Wait()
 	log.Printf("All subscribers have completed.")
 }
 
-// PrintActiveClientStatus the status of the current test
-func (cc *ClientManager) PrintActiveClientStatus(ivl int) {
-	for {
-		time.Sleep(time.Duration(ivl) * time.Second)
-		cc.PrintReport(true)
+// StartActiveClientReporting the status of the current test
+func (cm *ClientManager) StartActiveClientReporting() {
+	if cm.printInterval > 0 {
+		go func() {
+			for {
+				time.Sleep(time.Duration(cm.printInterval) * time.Second)
+				cm.PrintReport(true)
+			}
+		}()
 	}
 }
 
+func (cc *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int) {
+	d := time.Now().Sub(cc.perfStartTime)
+	msRate := float64(msgsSent) / d.Seconds()
+	mrRate := float64(msgsRecv) / d.Seconds()
+
+	log.Printf("Sent aggregate %d msgs at %d msgs/sec.\n", msgsSent, int(msRate))
+	log.Printf("Received aggregate %d msgs at %d msgs/sec.\n", msgsRecv, int(mrRate))
+}
+
 // PrintReport runs a report of current active clients
-func (cc *ClientManager) PrintReport(activeOnly bool) {
+func (cm *ClientManager) PrintReport(activeOnly bool) {
 	var line string
 	var count int
 	var tsent int32
 	var trecv int32
 
-	cc.Lock()
-	defer cc.Unlock()
+	cm.Lock()
+	defer cm.Unlock()
 
 	if activeOnly {
 		log.Printf("*** Active Clients ***")
@@ -613,12 +634,12 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 		log.Printf("*** All Clients ***")
 	}
 
-	for _, c := range cc.clientsMap {
+	for _, c := range cm.clientsMap {
 		c.Lock()
 		done := c.done
 		c.Unlock()
 
-		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2006-01-02 15:04:05"), c.clientID)
+		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2016-04-08 15:04:05"), c.clientID)
 		if c.isPublisher() {
 			tsent += c.GetPublishCount()
 			line += fmt.Sprintf(" pub: %s=(%d/%d)", c.config.PublishSubject,
@@ -633,15 +654,17 @@ func (cc *ClientManager) PrintReport(activeOnly bool) {
 					csub.GetReceivedCount(), csub.max)
 			}
 		}
-		if !activeOnly || (activeOnly && !done) {
-			log.Printf("%s\n", line)
+
+		if cm.longReport {
+			if !activeOnly || (activeOnly && !done) {
+				log.Printf("%s\n", line)
+			}
 		}
 		count++
 	}
 
-	log.Printf("%d clients reported.", count)
-	log.Printf("%d msgs sent, %d msgs received.\n\n",
-		tsent, trecv)
+	log.Printf("%d clients listed of %d clients.", count, len(cm.clientsMap))
+	cm.printAggregateMsgRate(int(tsent), int(trecv))
 }
 
 func disconnectedHandler(nc *nats.Conn) {
@@ -665,9 +688,9 @@ func errorHandler(nc *nats.Conn, sub *nats.Subscription, err error) {
 		nc.Opts.Name, sub.Subject, err)
 }
 
-func run(configFile string, vbs bool, tbs bool, prIvl int) {
-	verbose = vbs
-	if tbs {
+func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int) {
+	verbose = isVerbose
+	if isTraceVerbose {
 		verbose = true
 		trace = true
 	}
@@ -682,9 +705,9 @@ func run(configFile string, vbs bool, tbs bool, prIvl int) {
 		log.Fatalf("connection error:  %v\n", err)
 	}
 
-	cman := NewClientManager(connPool, cfg)
+	cman := NewClientManager(connPool, cfg, prIvl, longReport)
 	cman.RunClients()
-	cman.WaitForCompletion(prIvl)
+	cman.WaitForCompletion()
 	cman.PrintReport(false)
 	log.Println("Test completed.")
 }
@@ -694,9 +717,10 @@ func main() {
 	var vb = flag.Bool("V", false, "Verbose")
 	var tb = flag.Bool("DV", false, "Verbose/Trace")
 	var pr = flag.Int("report", 0, "Print an active client report every X seconds")
+	var lf = flag.Bool("lr", false, "Print a long form of report data.")
 
 	log.SetFlags(0)
 	flag.Parse()
 
-	run(*configFile, *vb, *tb, *pr)
+	run(*configFile, *vb, *tb, *lf, *pr)
 }
