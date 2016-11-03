@@ -307,6 +307,7 @@ func (c *Client) delayPublish() {
 
 func (c *Client) publishMessage(subject string) {
 	var err error
+	var guid string
 
 	c.delayPublish()
 
@@ -316,7 +317,7 @@ func (c *Client) publishMessage(subject string) {
 	}
 
 	if c.config.PubAsync {
-		_, err = c.sc.PublishAsync(subject, c.payload, c.ah)
+		guid, err = c.sc.PublishAsync(subject, c.payload, c.ah)
 	} else {
 		err = c.sc.Publish(subject, c.payload)
 	}
@@ -325,8 +326,11 @@ func (c *Client) publishMessage(subject string) {
 	}
 
 	if trace {
-		log.Printf("%s: Success sending %d to %s.\n", c.clientID,
-			atomic.LoadInt32(&c.publishCount), subject)
+		if guid == "" {
+			guid = "N/A"
+		}
+		log.Printf("%s: Success sending %d (guid:%s) to %s.\n", c.clientID,
+			atomic.LoadInt32(&c.publishCount), guid, subject)
 	}
 	atomic.AddInt32(&c.publishCount, 1)
 }
@@ -334,10 +338,18 @@ func (c *Client) publishMessage(subject string) {
 // Publish publishes client messages
 func (c *Client) Publish() {
 	async := c.config.PubAsync
+	var expectedAcks int
+	var ch chan (bool)
+
+	if c.publishUniqueSubjects() {
+		expectedAcks = c.config.PubMsgCount * int(currentSubjectID)
+	} else {
+		expectedAcks = c.config.PubMsgCount
+	}
 
 	verbosef("%s: Started publishing.\n", c.clientID)
 	if async {
-		c.pubCh = make(chan bool, c.config.PubMsgCount)
+		ch = make(chan bool)
 		c.ah = func(guid string, err error) {
 			if err != nil {
 				log.Fatalf("Error publishing: %v.\n", err)
@@ -347,8 +359,8 @@ func (c *Client) Publish() {
 				log.Printf("%s: Ack # %d with message %s.\n", c.clientID,
 					c.pubAckCount, guid)
 			}
-			if c.pubAckCount >= c.config.PubMsgCount {
-				c.pubCh <- true
+			if c.pubAckCount >= expectedAcks {
+				ch <- true
 			}
 		}
 	}
@@ -363,7 +375,7 @@ func (c *Client) Publish() {
 	// wait for async publishers
 	if async {
 		verbosef("%s:  Waiting for async publishers to complete.\n", c.clientID)
-		<-c.pubCh
+		<-ch
 	}
 
 	verbosef("%s: Publishing complete.\n", c.clientID)
@@ -577,7 +589,7 @@ func (cc *ClientManager) WaitForCompletion(prIvl int) {
 	log.Printf("All subscribers have completed.")
 }
 
-// Prints the status of the current test
+// PrintActiveClientStatus the status of the current test
 func (cc *ClientManager) PrintActiveClientStatus(ivl int) {
 	for {
 		time.Sleep(time.Duration(ivl) * time.Second)
