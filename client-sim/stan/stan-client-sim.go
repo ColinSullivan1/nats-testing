@@ -105,6 +105,7 @@ type ClientConfig struct {
 	Name           string            `json:"name"`
 	Instances      int               `json:"instances"`
 	PubAsync       bool              `json:"pub_async"`
+	PubMaxAcks     int               `json:"pub_max_acks"`
 	PubMsgSize     int               `json:"pub_msgsize"`
 	PubRate        string            `json:"pub_delay"`
 	PubMsgCount    int               `json:"pub_msgcount"`
@@ -178,7 +179,7 @@ func (c *Client) connect() error {
 	var err error
 	c.sc, err = stan.Connect("test-cluster", c.clientID, stan.NatsConn(c.nc),
 		stan.ConnectWait(DefaultConnectWait), stan.PubAckWait(2*time.Minute),
-		stan.MaxPubAcksInflight(4096))
+		stan.MaxPubAcksInflight(c.config.PubMaxAcks))
 	return err
 }
 
@@ -309,20 +310,25 @@ func (c *Client) publishMessage(subject string) {
 
 	c.delayPublish()
 
+	if trace {
+		log.Printf("%s: Sending message %d to %s.\n", c.clientID,
+			atomic.LoadInt32(&c.publishCount), subject)
+	}
+
 	if c.config.PubAsync {
 		_, err = c.sc.PublishAsync(subject, c.payload, c.ah)
 	} else {
 		err = c.sc.Publish(subject, c.payload)
 	}
 	if err != nil {
-		log.Fatalf("Error publishing: %v.\n", err)
+		log.Fatalf("%s: Error publishing: %v.\n", c.clientID, err)
 	}
-	atomic.AddInt32(&c.publishCount, 1)
 
 	if trace {
-		log.Printf("%s: Sent message %d to %s.\n", c.clientID,
+		log.Printf("%s: Success sending %d to %s.\n", c.clientID,
 			atomic.LoadInt32(&c.publishCount), subject)
 	}
+	atomic.AddInt32(&c.publishCount, 1)
 }
 
 // Publish publishes client messages
@@ -427,6 +433,7 @@ func GenerateDefaultConfigFile() ([]byte, error) {
 	cfg.Clients[0].Instances = 1
 	cfg.Clients[0].Name = "pub"
 	cfg.Clients[0].PubAsync = true
+	cfg.Clients[0].PubMaxAcks = 1024
 	cfg.Clients[0].PubMsgCount = 100000
 	cfg.Clients[0].PubMsgSize = 128
 	cfg.Clients[0].PubRate = "0"
