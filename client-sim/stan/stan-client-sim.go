@@ -331,13 +331,17 @@ func (c *Client) Publish() {
 
 	verbosef("%s: Started publishing.\n", c.clientID)
 	if async {
-		c.pubCh = make(chan bool)
+		c.pubCh = make(chan bool, c.config.PubMsgCount)
 		c.ah = func(guid string, err error) {
 			if err != nil {
 				log.Fatalf("Error publishing: %v.\n", err)
 			}
 			c.pubAckCount++
-			if c.pubAckCount == c.config.PubMsgCount {
+			if trace {
+				log.Printf("%s: Ack # %d with message %s.\n", c.clientID,
+					c.pubAckCount, guid)
+			}
+			if c.pubAckCount >= c.config.PubMsgCount {
 				c.pubCh <- true
 			}
 		}
@@ -352,6 +356,7 @@ func (c *Client) Publish() {
 
 	// wait for async publishers
 	if async {
+		verbosef("%s:  Waiting for async publishers to complete.\n", c.clientID)
 		<-c.pubCh
 	}
 
