@@ -486,7 +486,6 @@ func (cm *ClientManager) RunClients() {
 	cm.subStartedWg.Add(cm.subCount)
 	cm.pubDoneWg.Add(cm.pubCount)
 	cm.subDoneWg.Add(cm.subCount)
-	fmt.Printf("COLIN:  added subcount of %d\n", cm.subCount)
 
 	for _, c := range cm.clientsMap {
 		go c.Run()
