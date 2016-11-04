@@ -16,9 +16,10 @@ import (
 
 	"math/rand"
 
-	"github.com/nats-io/go-nats-streaming"
 	"github.com/nats-io/nats"
 )
+
+// TODO:  Create interfaces and reuse code w/ stan-client-sim
 
 // Some sane defaults
 const (
@@ -27,13 +28,6 @@ const (
 	UniqueSubject         = "UNIQUE"
 )
 
-// NatsServerConnPool manages a pool of NATS connections
-type NatsServerConnPool struct {
-	sync.Mutex
-	currentConn int
-	conns       []*nats.Conn
-}
-
 var trace bool
 var verbose bool
 
@@ -41,57 +35,6 @@ func verbosef(format string, v ...interface{}) {
 	if verbose {
 		log.Printf(format, v...)
 	}
-}
-
-// NewNatsServerConnPool creates a NATS connection pool
-func NewNatsServerConnPool(cfg *Config) (*NatsServerConnPool, error) {
-	var err error
-
-	opts := nats.DefaultOptions
-	opts.Servers = strings.Split(cfg.ServerURLs, ",")
-	for i, s := range opts.Servers {
-		opts.Servers[i] = strings.Trim(s, " ")
-	}
-
-	opts.Secure = cfg.UseTLS
-	opts.AsyncErrorCB = errorHandler
-	opts.DisconnectedCB = disconnectedHandler
-	opts.ReconnectedCB = reconnectedHandler
-	opts.ClosedCB = closedHandler
-
-	if cfg.NumConns < 0 {
-		return nil, nil
-	}
-
-	ncp := &NatsServerConnPool{}
-	ncp.conns = make([]*nats.Conn, cfg.NumConns)
-	for i := 0; i < cfg.NumConns; i++ {
-		opts.Name = fmt.Sprintf("conn-%d", i)
-		ncp.conns[i], err = opts.Connect()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ncp, nil
-}
-
-// GetNextNatsConn returns an active NATS connection
-func (p *NatsServerConnPool) GetNextNatsConn() *nats.Conn {
-	p.Lock()
-	defer p.Unlock()
-
-	if p.conns == nil {
-		return nil
-	}
-
-	if p.currentConn == len(p.conns) {
-		p.currentConn = 0
-	}
-	nc := p.conns[p.currentConn]
-	p.currentConn++
-
-	return nc
 }
 
 // ClientSubConfig represents a subscription for a client
@@ -104,8 +47,6 @@ type ClientSubConfig struct {
 type ClientConfig struct {
 	Name           string            `json:"name"`
 	Instances      int               `json:"instances"`
-	PubAsync       bool              `json:"pub_async"`
-	PubMaxAcks     int               `json:"pub_max_acks"`
 	PubMsgSize     int               `json:"pub_msgsize"`
 	PubRate        string            `json:"pub_delay"`
 	PubMsgCount    int               `json:"pub_msgcount"`
@@ -115,7 +56,6 @@ type ClientConfig struct {
 
 // Config is the server configuration
 type Config struct {
-	NumConns      int            `json:"numconns"`
 	MaxStartDelay int            `json:"client_start_delay_max"`
 	ServerURLs    string         `json:"url"`
 	UseTLS        bool           `json:"usetls"`
@@ -125,7 +65,7 @@ type Config struct {
 // ClientSub is a client subscription
 type ClientSub struct {
 	subject  string
-	sub      stan.Subscription
+	sub      *nats.Subscription
 	ch       chan (bool)
 	received int32
 	max      int32
@@ -141,29 +81,24 @@ func (cs *ClientSub) GetReceivedCount() int32 {
 type Client struct {
 	sync.Mutex
 	cm                *ClientManager
-	clientID          string
 	config            *ClientConfig
+	clientID          string
 	hasUniqueSubjects bool
 	nc                *nats.Conn
-	sc                stan.Conn
 	subs              []*ClientSub
 	publishCount      int32
 	publishDelay      time.Duration
 	subCh             chan (bool)
-	pubAckCount       int
-	ah                stan.AckHandler
 	payload           []byte
 	done              bool
 }
 
 // NewClient returns a new client.
-// TODO:  NATS/Stan options per client, if necessary
 func NewClient(config *ClientConfig, instance int, cm *ClientManager) *Client {
 	c := &Client{}
 	c.cm = cm
 	c.config = config
 	c.clientID = fmt.Sprintf("%s-%d", c.config.Name, instance)
-	c.nc = cm.ncPool.GetNextNatsConn()
 
 	if c.isPublisher() {
 		c.publishDelay = parsePubRate(c.config.PubRate)
@@ -171,21 +106,28 @@ func NewClient(config *ClientConfig, instance int, cm *ClientManager) *Client {
 	return c
 }
 
-var currentClientID int32
-
 func (c *Client) connect() error {
 	var err error
-	c.sc, err = stan.Connect("test-cluster", c.clientID, stan.NatsConn(c.nc),
-		stan.ConnectWait(DefaultConnectWait), stan.PubAckWait(2*time.Minute),
-		stan.MaxPubAcksInflight(c.config.PubMaxAcks))
+	opts := nats.DefaultOptions
+	opts.Servers = strings.Split(c.cm.config.ServerURLs, ",")
+	for i, s := range opts.Servers {
+		opts.Servers[i] = strings.Trim(s, " ")
+	}
+
+	opts.Secure = c.cm.config.UseTLS
+	opts.AsyncErrorCB = errorHandler
+	opts.DisconnectedCB = disconnectedHandler
+	opts.ReconnectedCB = reconnectedHandler
+	opts.ClosedCB = closedHandler
+
+	opts.Name = c.clientID
+	c.nc, err = opts.Connect()
 	return err
 }
 
 func (c *Client) close() {
 	c.closeSubscriptions()
-	if err := c.sc.Close(); err != nil {
-		log.Printf("error closing stan connection: %v\n", err)
-	}
+	c.nc.Close()
 }
 
 func (c *Client) publishUniqueSubjects() bool {
@@ -209,7 +151,7 @@ func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	csub.subject = configSub.Subject
 
 	// unique callback per sub
-	mh := func(msg *stan.Msg) {
+	mh := func(msg *nats.Msg) {
 		val := atomic.AddInt32(&csub.received, 1)
 		if trace {
 			log.Printf("%s: Received message %d on %s.\n", c.clientID,
@@ -224,12 +166,14 @@ func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	if csub.subject == UniqueSubject {
 		csub.subject = nextGlobalUniqueSubject()
 	}
-	stanSub, err := c.sc.Subscribe(csub.subject, mh)
+	natsSub, err := c.nc.Subscribe(csub.subject, mh)
 	if err != nil {
 		log.Fatalf("Error creating subscription for %s: %v", csub.subject, err)
 	}
 
-	csub.sub = stanSub
+	c.nc.Flush()
+
+	csub.sub = natsSub
 	c.subs = append(c.subs, csub)
 
 	verbosef("%s: Subscribed to %s.\n", c.clientID, csub.subject)
@@ -314,11 +258,7 @@ func (c *Client) publishMessage(subject string) {
 			atomic.LoadInt32(&c.publishCount), subject)
 	}
 
-	if c.config.PubAsync {
-		guid, err = c.sc.PublishAsync(subject, c.payload, c.ah)
-	} else {
-		err = c.sc.Publish(subject, c.payload)
-	}
+	err = c.nc.Publish(subject, c.payload)
 	if err != nil {
 		log.Fatalf("%s: Error publishing: %v.\n", c.clientID, err)
 	}
@@ -327,53 +267,23 @@ func (c *Client) publishMessage(subject string) {
 		if guid == "" {
 			guid = "N/A"
 		}
-		log.Printf("%s: Success sending %d (guid:%s) to %s.\n", c.clientID,
-			atomic.LoadInt32(&c.publishCount), guid, subject)
+		log.Printf("%s: Success sending %d to %s.\n", c.clientID,
+			atomic.LoadInt32(&c.publishCount), subject)
 	}
+
 	atomic.AddInt32(&c.publishCount, 1)
 }
 
 // Publish publishes client messages
 func (c *Client) Publish() {
-	async := c.config.PubAsync
-	var expectedAcks int
-	var ch chan (bool)
-
-	if c.publishUniqueSubjects() {
-		expectedAcks = c.config.PubMsgCount * int(currentSubjectID)
-	} else {
-		expectedAcks = c.config.PubMsgCount
-	}
-
 	verbosef("%s: Started publishing.\n", c.clientID)
-	if async {
-		ch = make(chan bool)
-		c.ah = func(guid string, err error) {
-			if err != nil {
-				log.Fatalf("Error publishing: %v.\n", err)
-			}
-			c.pubAckCount++
-			if trace {
-				log.Printf("%s: Ack # %d with message %s.\n", c.clientID,
-					c.pubAckCount, guid)
-			}
-			if c.pubAckCount >= expectedAcks {
-				ch <- true
-			}
-		}
-	}
+
 	c.payload = c.cm.payloadBuffer[:c.config.PubMsgSize]
 
 	if c.publishUniqueSubjects() {
 		c.publishUniqueMessages()
 	} else {
 		c.publishSubjectMsgs()
-	}
-
-	// wait for async publishers
-	if async {
-		verbosef("%s:  Waiting for async publishers to complete.\n", c.clientID)
-		<-ch
 	}
 
 	verbosef("%s: Publishing complete.\n", c.clientID)
@@ -434,7 +344,6 @@ func usage() {
 func GenerateDefaultConfigFile() ([]byte, error) {
 	cfg := Config{}
 	cfg.MaxStartDelay = 0
-	cfg.NumConns = 1
 	cfg.ServerURLs = "nats://localhost:4222"
 	cfg.UseTLS = false
 
@@ -442,8 +351,6 @@ func GenerateDefaultConfigFile() ([]byte, error) {
 
 	cfg.Clients[0].Instances = 1
 	cfg.Clients[0].Name = "pub"
-	cfg.Clients[0].PubAsync = true
-	cfg.Clients[0].PubMaxAcks = 1024
 	cfg.Clients[0].PubMsgCount = 100000
 	cfg.Clients[0].PubMsgSize = 128
 	cfg.Clients[0].PubRate = "0"
@@ -505,7 +412,6 @@ func getConfig(jsonString string) (*Config, error) {
 type ClientManager struct {
 	sync.Mutex
 	clientsMap    map[string]*Client
-	ncPool        *NatsServerConnPool
 	config        *Config
 	pubCount      int
 	subCount      int
@@ -519,19 +425,30 @@ type ClientManager struct {
 }
 
 func printClient(c *Client) {
-	verbosef("%s: Created.  async=%v,pubsubj=%s,pubcount=%d,msgsize=%d,sub=%s,subcount=%d",
-		c.clientID, c.config.PubAsync, c.config.PublishSubject,
+	verbosef("%s: Created.  pubsubj=%s,pubcount=%d,msgsize=%d,sub=%s,subcount=%d",
+		c.clientID, c.config.PublishSubject,
 		c.config.PubMsgCount,
 		c.config.PubMsgSize, "",
 		len(c.config.Subscriptions))
 }
 
 // NewClientManager creates a client manager
-func NewClientManager(ncPool *NatsServerConnPool, cfg *Config, prIvl int, longReport bool) *ClientManager {
+func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	var maxMsgSize int
 
+	opts := nats.DefaultOptions
+	opts.Servers = strings.Split(cfg.ServerURLs, ",")
+	for i, s := range opts.Servers {
+		opts.Servers[i] = strings.Trim(s, " ")
+	}
+
+	opts.Secure = cfg.UseTLS
+	opts.AsyncErrorCB = errorHandler
+	opts.DisconnectedCB = disconnectedHandler
+	opts.ReconnectedCB = reconnectedHandler
+	opts.ClosedCB = closedHandler
+
 	cm := &ClientManager{}
-	cm.ncPool = ncPool
 	cm.config = cfg
 	cm.printInterval = prIvl
 	cm.longReport = longReport
@@ -569,6 +486,7 @@ func (cm *ClientManager) RunClients() {
 	cm.subStartedWg.Add(cm.subCount)
 	cm.pubDoneWg.Add(cm.pubCount)
 	cm.subDoneWg.Add(cm.subCount)
+	fmt.Printf("COLIN:  added subcount of %d\n", cm.subCount)
 
 	for _, c := range cm.clientsMap {
 		go c.Run()
@@ -698,12 +616,7 @@ func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl in
 		log.Fatalf("error loading configuration file:  %v\n", err)
 	}
 
-	connPool, err := NewNatsServerConnPool(cfg)
-	if err != nil {
-		log.Fatalf("connection error:  %v\n", err)
-	}
-
-	cman := NewClientManager(connPool, cfg, prIvl, longReport)
+	cman := NewClientManager(cfg, prIvl, longReport)
 	cman.RunClients()
 	cman.WaitForCompletion()
 	cman.PrintReport(false)
