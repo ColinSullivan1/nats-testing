@@ -663,7 +663,7 @@ func (cm *ClientManager) PrintReport(activeOnly bool) {
 		count++
 	}
 
-	log.Printf("%d clients listed of %d clients.", count, len(cm.clientsMap))
+	log.Printf("%d of %d clients listed.", count, len(cm.clientsMap))
 	cm.printAggregateMsgRate(int(tsent), int(trecv))
 }
 
