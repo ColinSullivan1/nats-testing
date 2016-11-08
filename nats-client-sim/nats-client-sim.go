@@ -47,6 +47,8 @@ type ClientSubConfig struct {
 type ClientConfig struct {
 	Name           string            `json:"name"`
 	Instances      int               `json:"instances"`
+	UserName       string            `json:"username"`
+	Password       string            `json:"password"`
 	PubMsgSize     int               `json:"pub_msgsize"`
 	PubRate        string            `json:"pub_delay"`
 	PubMsgCount    int               `json:"pub_msgcount"`
@@ -58,6 +60,9 @@ type ClientConfig struct {
 type Config struct {
 	MaxStartDelay int            `json:"client_start_delay_max"`
 	ServerURLs    string         `json:"url"`
+	TLSClientCA   string         `json:"tlsca"`
+	TLSClientCert string         `json:"tlscert"`
+	TLSClientKey  string         `json:"tlskey"`
 	UseTLS        bool           `json:"usetls"`
 	Clients       []ClientConfig `json:"clients"`
 }
@@ -119,7 +124,8 @@ func (c *Client) connect() error {
 	opts.DisconnectedCB = disconnectedHandler
 	opts.ReconnectedCB = reconnectedHandler
 	opts.ClosedCB = closedHandler
-
+	opts.User = c.config.UserName
+	opts.Password = c.config.Password
 	opts.Name = c.clientID
 	c.nc, err = opts.Connect()
 	return err
@@ -170,7 +176,6 @@ func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	if err != nil {
 		log.Fatalf("Error creating subscription for %s: %v", csub.subject, err)
 	}
-
 	c.nc.Flush()
 
 	csub.sub = natsSub
@@ -249,29 +254,18 @@ func (c *Client) delayPublish() {
 
 func (c *Client) publishMessage(subject string) {
 	var err error
-	var guid string
 
 	c.delayPublish()
 
-	if trace {
-		log.Printf("%s: Sending message %d to %s.\n", c.clientID,
-			atomic.LoadInt32(&c.publishCount), subject)
-	}
-
+	atomic.AddInt32(&c.publishCount, 1)
 	err = c.nc.Publish(subject, c.payload)
 	if err != nil {
 		log.Fatalf("%s: Error publishing: %v.\n", c.clientID, err)
 	}
-
 	if trace {
-		if guid == "" {
-			guid = "N/A"
-		}
-		log.Printf("%s: Success sending %d to %s.\n", c.clientID,
+		log.Printf("%s: Success sending msg # %d to %s.\n", c.clientID,
 			atomic.LoadInt32(&c.publishCount), subject)
 	}
-
-	atomic.AddInt32(&c.publishCount, 1)
 }
 
 // Publish publishes client messages
@@ -284,6 +278,9 @@ func (c *Client) Publish() {
 		c.publishUniqueMessages()
 	} else {
 		c.publishSubjectMsgs()
+	}
+	if err := c.nc.Flush(); err != nil {
+		log.Fatalf("%s: error flushing: %v", c.clientID, err)
 	}
 
 	verbosef("%s: Publishing complete.\n", c.clientID)
@@ -307,7 +304,7 @@ func (c *Client) Run() error {
 	}
 
 	if err := c.connect(); err != nil {
-		return err
+		log.Fatalf("%s:  unable to connect: %v", c.clientID, err)
 	}
 
 	verbosef("%s: Connected.", c.clientID)
@@ -442,11 +439,31 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 		opts.Servers[i] = strings.Trim(s, " ")
 	}
 
-	opts.Secure = cfg.UseTLS
+	opts.Secure = true
 	opts.AsyncErrorCB = errorHandler
 	opts.DisconnectedCB = disconnectedHandler
 	opts.ReconnectedCB = reconnectedHandler
 	opts.ClosedCB = closedHandler
+	if cfg.UseTLS {
+		verbosef("Using TLS.\n")
+		if err := nats.Secure()(&opts); err != nil {
+			log.Fatalf("error enabliing tls: %v\n", err)
+		}
+	}
+	if cfg.TLSClientCA != "" {
+		verbosef("Using client CA %s\n", cfg.TLSClientCA)
+		if err := nats.RootCAs(cfg.TLSClientCert)(&opts); err != nil {
+			log.Fatalf("client CA error: %v\n", err)
+		}
+	}
+	if cfg.TLSClientCert != "" {
+		verbosef("Using client cert: %s\n", cfg.TLSClientCert)
+		verbosef("Using client key: %s\n", cfg.TLSClientKey)
+		if err := nats.ClientCert(cfg.TLSClientCert, cfg.TLSClientKey)(&opts); err != nil {
+			log.Fatalf("client cert error: %v\n", err)
+		}
+		opts.TLSConfig.InsecureSkipVerify = true
+	}
 
 	cm := &ClientManager{}
 	cm.config = cfg
@@ -495,7 +512,7 @@ func (cm *ClientManager) RunClients() {
 
 // WaitForCompletion waits until all clients have been completed.
 func (cm *ClientManager) WaitForCompletion() {
-	log.Printf("Waiting for clients to subscribe.")
+	log.Printf("Waiting for clients to connect and subscribe.")
 	cm.subStartedWg.Wait()
 	log.Printf("All subscribing clients ready.")
 
@@ -524,8 +541,8 @@ func (cm *ClientManager) StartActiveClientReporting() {
 	}
 }
 
-func (cc *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int) {
-	d := time.Now().Sub(cc.perfStartTime)
+func (cm *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int) {
+	d := time.Now().Sub(cm.perfStartTime)
 	msRate := float64(msgsSent) / d.Seconds()
 	mrRate := float64(msgsRecv) / d.Seconds()
 
