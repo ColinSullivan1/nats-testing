@@ -601,13 +601,13 @@ func (cm *ClientManager) PrintReport(activeOnly bool) {
 
 func disconnectedHandler(nc *nats.Conn) {
 	if nc.LastError() != nil {
-		log.Fatalf("connection %q has been disconnected: %v\n",
+		log.Printf("connection %q has been disconnected: %v\n",
 			nc.Opts.Name, nc.LastError())
 	}
 }
 
 func reconnectedHandler(nc *nats.Conn) {
-	log.Fatalf("connection %q reconnected to NATS Server at %q\n",
+	log.Printf("connection %q reconnected to NATS Server at %q\n",
 		nc.Opts.Name, nc.ConnectedUrl())
 }
 
