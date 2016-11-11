@@ -128,6 +128,16 @@ func (c *Client) connect() error {
 	opts.Password = c.config.Password
 	opts.Name = c.clientID
 	c.nc, err = opts.Connect()
+
+	// if we can't connect via error, keep trying - this is
+	// a stress test.
+	if err != nats.ErrNoServers {
+		for i := 0; i < 10; i++ {
+			log.Printf("%s:  retrying initial connect.  %v\n", c.clientID, err)
+			time.Sleep(100 * time.Millisecond)
+			c.nc, err = opts.Connect()
+		}
+	}
 	return err
 }
 
