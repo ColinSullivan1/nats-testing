@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Convenience script should be copied to the test machine
+# wget https://raw.githubusercontent.com/ColinSullivan1/nats-testing/master/scripts/install_tests.sh
 
 sudo apt install git
 sudo apt install golang
