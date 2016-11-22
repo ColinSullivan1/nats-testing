@@ -58,8 +58,8 @@ type ClientConfig struct {
 
 // Config is the server configuration
 type Config struct {
+	ServerURLs    string
 	MaxStartDelay int            `json:"client_start_delay_max"`
-	ServerURLs    string         `json:"url"`
 	TLSClientCA   string         `json:"tlsca"`
 	TLSClientCert string         `json:"tlscert"`
 	TLSClientKey  string         `json:"tlskey"`
@@ -131,8 +131,8 @@ func (c *Client) connect() error {
 
 	// if we can't connect via error, keep trying - this is
 	// a stress test.
-	if err != nil && err != nats.ErrNoServers {
-		for i := 0; i < 10; i++ {
+	if err != nil {
+		for i := 0; i < 50; i++ {
 			log.Printf("%s:  retrying initial connect.  %v\n", c.clientID, err)
 			time.Sleep(100 * time.Millisecond)
 			c.nc, err = opts.Connect()
@@ -633,7 +633,7 @@ func errorHandler(nc *nats.Conn, sub *nats.Subscription, err error) {
 		nc.Opts.Name, sub.Subject, err)
 }
 
-func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int) {
+func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int, url string) {
 	verbose = isVerbose
 	if isTraceVerbose {
 		verbose = true
@@ -644,6 +644,7 @@ func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl in
 	if err != nil {
 		log.Fatalf("error loading configuration file:  %v\n", err)
 	}
+	cfg.ServerURLs = url
 
 	cman := NewClientManager(cfg, prIvl, longReport)
 	cman.RunClients()
@@ -658,9 +659,10 @@ func main() {
 	var tb = flag.Bool("DV", false, "Verbose/Trace")
 	var pr = flag.Int("report", 0, "Print an active client report every X seconds")
 	var lf = flag.Bool("lr", false, "Print a long form of report data.")
+	var url = flag.String("url", "nats://localhost:4222", "url to connect to.")
 
 	log.SetFlags(0)
 	flag.Parse()
 
-	run(*configFile, *vb, *tb, *lf, *pr)
+	run(*configFile, *vb, *tb, *lf, *pr, *url)
 }
