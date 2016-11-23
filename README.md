@@ -65,5 +65,5 @@ Ensure prometheus is reachable, and the target collector is `UP`.
 
 # TODO
 
-[ ] Streamline Installation (Too many steps)
-[ ] Doc client simulators
+- [ ] Streamline Installation (Too many steps)
+- [ ] Doc client simulators
