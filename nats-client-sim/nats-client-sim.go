@@ -16,7 +16,7 @@ import (
 
 	"math/rand"
 
-	"github.com/nats-io/nats"
+	"github.com/nats-io/go-nats"
 )
 
 // TODO:  Create interfaces and reuse code w/ stan-client-sim
