@@ -17,7 +17,7 @@ import (
 	"math/rand"
 
 	"github.com/nats-io/go-nats-streaming"
-	"github.com/nats-io/nats"
+	"github.com/nats-io/go-nats"
 )
 
 // Some sane defaults
