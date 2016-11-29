@@ -20,3 +20,9 @@ go get github.com/nats-io/gnatsd
 echo "Getting promethous exporter"
 go get github.com/prometheus/collectd_exporter
 
+#
+# Client testing dependencies
+#
+go get github.com/nats-io/go-nats
+go get github.com/nats-io/go-nats-streaming
+
