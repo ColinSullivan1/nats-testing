@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 count=10
 url=localhost

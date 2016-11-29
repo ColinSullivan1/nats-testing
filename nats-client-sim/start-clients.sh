@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 count=10
@@ -21,7 +21,7 @@ i=0
 while [  $i -lt $count ]; do
     cmd="./nats-client-sim -url \"nats://$url:400$i\" -config $config"
     echo "$cmd"
-    # $cmd &
+    $cmd &
     let i=i+1 
 done
 
