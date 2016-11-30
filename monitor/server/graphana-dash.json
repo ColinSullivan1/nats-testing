@@ -12,7 +12,7 @@
     {
       "collapse": false,
       "editable": true,
-      "height": "250px",
+      "height": "350px",
       "panels": [
         {
           "aliasColors": {},
@@ -36,27 +36,29 @@
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": false,
+            "alignAsTable": true
           },
           "lines": true,
           "linewidth": 2,
           "links": [],
           "nullPointMode": "connected",
-          "percentage": false,
+          "percentage": true,
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
           "span": 4,
-          "stack": false,
+          "stack": true,
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_memory",
-              "intervalFactor": 2,
+              "expr": "collectd_memory{memory=~\"free|used\"}",
+              "intervalFactor": 1,
+              "legendFormat": "",
               "metric": "collectd_memory",
               "refId": "A",
-              "step": 2
+              "step": 1
             }
           ],
           "timeFrom": null,
@@ -74,11 +76,11 @@
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "percent",
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": -1,
               "show": true
             },
             {
@@ -89,7 +91,8 @@
               "min": null,
               "show": true
             }
-          ]
+          ],
+          "transparent": false
         },
         {
           "aliasColors": {},
@@ -287,7 +290,7 @@
             "threshold2": null,
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
           },
-          "id": 3,
+          "id": 6,
           "isNew": true,
           "legend": {
             "avg": false,
@@ -312,16 +315,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_processes_ps_vm",
+              "expr": "collectd_processes_ps_rss",
               "intervalFactor": 2,
-              "metric": "collectd_processes_ps_vm",
+              "legendFormat": "",
+              "metric": "collectd_processes_ps_rss",
               "refId": "A",
               "step": 2
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Virtual Memory (NATS servers)",
+          "title": "RSS (NATS Servers)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -334,7 +338,7 @@
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "bytes",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -364,9 +368,10 @@
             "threshold2": null,
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
           },
-          "id": 6,
+          "id": 3,
           "isNew": true,
           "legend": {
+            "alignAsTable": false,
             "avg": false,
             "current": false,
             "max": false,
@@ -389,16 +394,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_processes_ps_rss",
+              "expr": "collectd_processes_ps_vm",
               "intervalFactor": 2,
-              "metric": "collectd_processes_ps_rss",
+              "legendFormat": "MB",
+              "metric": "collectd_processes_ps_vm",
               "refId": "A",
               "step": 2
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "RSS (NATS Servers)",
+          "title": "Virtual Memory (NATS servers)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -411,7 +417,92 @@
           },
           "yaxes": [
             {
+              "format": "bytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
               "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "title": "New row"
+    },
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": null,
+          "editable": true,
+          "error": false,
+          "fill": 4,
+          "grid": {
+            "threshold1": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2": null,
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "id": 14,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": true,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 12,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "collectd_aggregation_cpu{aggregation=\"cpu-average\"}",
+              "intervalFactor": 1,
+              "metric": "collectd_aggregation_cpu",
+              "refId": "A",
+              "step": 1
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "CPU Percentages",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 2,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "show": true
+          },
+          "yaxes": [
+            {
+              "format": "none",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -462,6 +553,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -510,8 +602,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": []
+          ]
         },
         {
           "aliasColors": {},
@@ -539,6 +630,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -587,8 +679,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": []
+          ]
         },
         {
           "aliasColors": {},
@@ -616,6 +707,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -629,6 +721,7 @@
             {
               "expr": "collectd_cpu{type=~\"user\",cpu=~\"2.\"}",
               "intervalFactor": 2,
+              "legendFormat": "",
               "metric": "collectd_cpu",
               "refId": "A",
               "step": 2
@@ -649,7 +742,7 @@
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "none",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -664,8 +757,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": []
+          ]
         },
         {
           "aliasColors": {},
@@ -693,6 +785,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -741,8 +834,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": []
+          ]
         },
         {
           "aliasColors": {},
@@ -770,6 +862,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -818,8 +911,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": []
+          ]
         }
       ],
       "title": "New row"
@@ -862,7 +954,7 @@
   },
   "refresh": false,
   "schemaVersion": 12,
-  "version": 17,
+  "version": 35,
   "links": [],
   "gnetId": null
 }
