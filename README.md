@@ -12,9 +12,9 @@ This assumes a clean ubuntu installation.
 cd $HOME
 sudo apt update
 sudo apt install git
-mkdir -p gopath/src/github.com/ColinSullivan1
-git clone https://github.com/ColinSullivan1/nats-testing.git gopath/src/github.com/ColinSullivan1
-cd gopath/src/github.com/ColinSullivan1/scripts
+mkdir -p gopath/src/github.com/ColinSullivan1/nats-testing
+git clone https://github.com/ColinSullivan1/nats-testing.git gopath/src/github.com/ColinSullivan1/nats-testing
+cd gopath/src/github.com/ColinSullivan1/nats-testing/scripts
 sh install_deps.sh
 sudo sh setup_ub.sh
 
