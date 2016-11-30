@@ -17,7 +17,8 @@ echo "Starting $count servers listening on $url."
 i=0
 cd server
 while [  $i -lt $count ]; do
-    cmd="$GOPATH/bin/gnatsd -config gnatsd.conf -a $url -p 400$i -l s$i.log"
+    port=$(( 4200 + $i ))
+    cmd="$GOPATH/bin/gnatsd -config gnatsd.conf -a $url -p $port -l s$i.log"
     echo "$cmd"
     $cmd &
     let i=i+1 
