@@ -15,8 +15,11 @@
       "height": "350px",
       "panels": [
         {
-          "aliasColors": {},
-          "bars": false,
+          "aliasColors": {
+            "collectd_memory{exported_instance=\"natsperf\",instance=\"natsperf:9103\",job=\"collectd-remote\",memory=\"free\"}": "#7EB26D",
+            "collectd_memory{exported_instance=\"natsperf\",instance=\"natsperf:9103\",job=\"collectd-remote\",memory=\"used\"}": "#705DA0"
+          },
+          "bars": true,
           "datasource": null,
           "editable": true,
           "error": false,
@@ -30,16 +33,16 @@
           "id": 2,
           "isNew": true,
           "legend": {
+            "alignAsTable": true,
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
             "show": true,
             "total": false,
-            "values": false,
-            "alignAsTable": true
+            "values": false
           },
-          "lines": true,
+          "lines": false,
           "linewidth": 2,
           "links": [],
           "nullPointMode": "connected",
@@ -53,7 +56,13 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_memory{memory=~\"free|used\"}",
+              "expr": "collectd_memory{memory=~\"used\"}",
+              "intervalFactor": 1,
+              "refId": "B",
+              "step": 1
+            },
+            {
+              "expr": "collectd_memory{memory=~\"free\"}",
               "intervalFactor": 1,
               "legendFormat": "",
               "metric": "collectd_memory",
@@ -70,6 +79,7 @@
             "sort": 0,
             "value_type": "cumulative"
           },
+          "transparent": false,
           "type": "graph",
           "xaxis": {
             "show": true
@@ -91,8 +101,7 @@
               "min": null,
               "show": true
             }
-          ],
-          "transparent": false
+          ]
         },
         {
           "aliasColors": {},
@@ -433,6 +442,84 @@
               "show": true
             }
           ]
+        },
+        {
+          "title": "NATS Server Count",
+          "error": false,
+          "span": 4,
+          "editable": true,
+          "type": "graph",
+          "isNew": true,
+          "id": 16,
+          "targets": [
+            {
+              "expr": "collectd_processes_ps_count_0",
+              "intervalFactor": 2,
+              "refId": "A",
+              "metric": "collectd_processes_ps_count_0",
+              "step": 2
+            }
+          ],
+          "datasource": null,
+          "renderer": "flot",
+          "yaxes": [
+            {
+              "label": null,
+              "show": true,
+              "logBase": 1,
+              "min": null,
+              "max": null,
+              "format": "none"
+            },
+            {
+              "label": null,
+              "show": true,
+              "logBase": 1,
+              "min": null,
+              "max": null,
+              "format": "short"
+            }
+          ],
+          "xaxis": {
+            "show": true
+          },
+          "grid": {
+            "threshold1": null,
+            "threshold2": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "lines": true,
+          "fill": 1,
+          "linewidth": 2,
+          "points": false,
+          "pointradius": 5,
+          "bars": false,
+          "stack": false,
+          "percentage": false,
+          "legend": {
+            "show": true,
+            "values": true,
+            "min": true,
+            "max": true,
+            "current": true,
+            "total": false,
+            "avg": false,
+            "alignAsTable": false
+          },
+          "nullPointMode": "connected",
+          "steppedLine": false,
+          "tooltip": {
+            "value_type": "cumulative",
+            "shared": true,
+            "sort": 0,
+            "msResolution": false
+          },
+          "timeFrom": null,
+          "timeShift": null,
+          "aliasColors": {},
+          "seriesOverrides": [],
+          "links": []
         }
       ],
       "title": "New row"
@@ -464,7 +551,9 @@
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": false,
+            "alignAsTable": true,
+            "rightSide": true
           },
           "lines": true,
           "linewidth": 2,
@@ -493,8 +582,8 @@
           "tooltip": {
             "msResolution": false,
             "shared": true,
-            "sort": 2,
-            "value_type": "cumulative"
+            "sort": 0,
+            "value_type": "individual"
           },
           "type": "graph",
           "xaxis": {
@@ -954,7 +1043,7 @@
   },
   "refresh": false,
   "schemaVersion": 12,
-  "version": 35,
+  "version": 46,
   "links": [],
   "gnetId": null
 }
