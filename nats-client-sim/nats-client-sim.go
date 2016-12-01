@@ -127,6 +127,7 @@ func (c *Client) connect() error {
 	opts.User = c.config.UserName
 	opts.Password = c.config.Password
 	opts.Name = c.clientID
+	opts.SubChanLen = 1024 * 1024
 	c.nc, err = opts.Connect()
 
 	// if we can't connect via error, keep trying - this is
