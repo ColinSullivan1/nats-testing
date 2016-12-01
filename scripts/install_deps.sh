@@ -13,6 +13,7 @@ tar -zxvf go1.7.1.linux-amd64.tar.gz -C $HOME
 
 export PATH=$HOME/go/bin:$PATH
 export GOPATH=$HOME/gopath
+export GOROOT=$HOME/go
 
 echo "Getting gnatsd"
 go get github.com/nats-io/gnatsd
