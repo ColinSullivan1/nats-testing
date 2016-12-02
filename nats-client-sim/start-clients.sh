@@ -1,7 +1,7 @@
 #!/bin/bash
 
 count=10
-config=configs/pub50_sub50_std_wc.json
+config=configs/pub25_sub25_2x2.json
 url=localhost
 
 while getopts c:u:g: option

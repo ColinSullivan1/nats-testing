@@ -1,0 +1,684 @@
+{
+  "client_start_delay_max": 5,
+  "tlsca": "",
+  "tlscert": "",
+  "tlskey": "",
+  "usetls": true,
+  "clients": [
+    {
+      "name": "pub-foo-0",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.0",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-1",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.1",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-2",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.2",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-3",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.3",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-4",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.4",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-5",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.5",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-6",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.6",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-7",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.7",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-8",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.8",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-9",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.0.9",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-10",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.0",
+      "subscriptions": null
+    },   
+    {
+      "name": "pub-foo-11",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.1",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-12",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.2",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-13",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.3",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-14",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.4",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-15",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.5",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-16",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.6",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-17",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.7",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-18",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.8",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-19",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.1.9",
+      "subscriptions": null
+    },   
+    {
+      "name": "pub-foo-20",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.2.0",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-21",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.2.1",
+      "subscriptions": null
+    },     
+    {
+      "name": "pub-foo-22",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.2.2",
+      "subscriptions": null
+    },          
+    {
+      "name": "pub-foo-23",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.2.3",
+      "subscriptions": null
+    }, 
+    {
+      "name": "pub-foo-24",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay": "0",
+      "pub_msgcount": 1000000,
+      "pub_subject": "foo.2.4",
+      "subscriptions": null
+    },
+    {
+      "name": "sub-0",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.0"
+        }
+      ]
+    },
+    {
+      "name": "sub-1",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.1"
+        }
+      ]
+    },       
+    {
+      "name": "sub-2",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.2"
+        }
+      ]
+    },
+    {
+      "name": "sub-3",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.3"
+        }
+      ]
+    },
+    {
+      "name": "sub-4",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.4"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-5",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.5"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-6",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.6"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-7",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.7"
+        }
+      ]
+    },  
+    {
+      "name": "sub-8",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.8"
+        }
+      ]
+    },
+    {
+      "name": "sub-9",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.0.9"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-10",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.0"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-11",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.1"
+        }
+      ]
+    },
+    {
+      "name": "sub-12",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.2"
+        }
+      ]
+    },
+    {
+      "name": "sub-13",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.3"
+        }
+      ]
+    },
+    {
+      "name": "sub-14",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.4"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-15",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.5"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-16",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.6"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-17",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.7"
+        }
+      ]
+    },  
+    {
+      "name": "sub-18",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.8"
+        }
+      ]
+    },
+    {
+      "name": "sub-19",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.1.9"
+        }
+      ]
+    },
+    {
+      "name": "sub-20",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.2.0"
+        }
+      ]
+    },   
+    {
+      "name": "sub-21",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.2.1"
+        }
+      ]
+    },    
+    {
+      "name": "sub-22",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.2.2"
+        }
+      ]
+    },    
+    {
+      "name": "sub-23",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.2.3"
+        }
+      ]
+    }, 
+    {
+      "name": "sub-24",
+      "instances": 2,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": 2000000,
+          "subject": "foo.2.4"
+        }
+      ]
+    }      
+  ]
+}
