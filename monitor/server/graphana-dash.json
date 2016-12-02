@@ -56,17 +56,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_memory{memory=~\"used\"}",
+              "expr": "collectd_memory_percent",
               "intervalFactor": 1,
               "refId": "B",
-              "step": 1
-            },
-            {
-              "expr": "collectd_memory{memory=~\"free\"}",
-              "intervalFactor": 1,
-              "legendFormat": "",
-              "metric": "collectd_memory",
-              "refId": "A",
               "step": 1
             }
           ],
@@ -326,7 +318,7 @@
             {
               "expr": "collectd_processes_ps_rss",
               "intervalFactor": 2,
-              "legendFormat": "",
+              "legendFormat": "MB",
               "metric": "collectd_processes_ps_rss",
               "refId": "A",
               "step": 2
@@ -348,7 +340,7 @@
           "yaxes": [
             {
               "format": "bytes",
-              "label": null,
+              "label": "",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -444,82 +436,82 @@
           ]
         },
         {
-          "title": "NATS Server Count",
-          "error": false,
-          "span": 4,
+          "aliasColors": {},
+          "bars": false,
+          "datasource": null,
           "editable": true,
-          "type": "graph",
-          "isNew": true,
+          "error": false,
+          "fill": 1,
+          "grid": {
+            "threshold1": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2": null,
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
           "id": 16,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
           "targets": [
             {
               "expr": "collectd_processes_ps_count_0",
               "intervalFactor": 2,
-              "refId": "A",
               "metric": "collectd_processes_ps_count_0",
+              "refId": "A",
               "step": 2
             }
           ],
-          "datasource": null,
-          "renderer": "flot",
-          "yaxes": [
-            {
-              "label": null,
-              "show": true,
-              "logBase": 1,
-              "min": null,
-              "max": null,
-              "format": "none"
-            },
-            {
-              "label": null,
-              "show": true,
-              "logBase": 1,
-              "min": null,
-              "max": null,
-              "format": "short"
-            }
-          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "NATS Server Count",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
           "xaxis": {
             "show": true
           },
-          "grid": {
-            "threshold1": null,
-            "threshold2": null,
-            "threshold1Color": "rgba(216, 200, 27, 0.27)",
-            "threshold2Color": "rgba(234, 112, 112, 0.22)"
-          },
-          "lines": true,
-          "fill": 1,
-          "linewidth": 2,
-          "points": false,
-          "pointradius": 5,
-          "bars": false,
-          "stack": false,
-          "percentage": false,
-          "legend": {
-            "show": true,
-            "values": true,
-            "min": true,
-            "max": true,
-            "current": true,
-            "total": false,
-            "avg": false,
-            "alignAsTable": false
-          },
-          "nullPointMode": "connected",
-          "steppedLine": false,
-          "tooltip": {
-            "value_type": "cumulative",
-            "shared": true,
-            "sort": 0,
-            "msResolution": false
-          },
-          "timeFrom": null,
-          "timeShift": null,
-          "aliasColors": {},
-          "seriesOverrides": [],
-          "links": []
+          "yaxes": [
+            {
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
         }
       ],
       "title": "New row"
@@ -545,15 +537,15 @@
           "id": 14,
           "isNew": true,
           "legend": {
+            "alignAsTable": true,
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
+            "rightSide": true,
             "show": true,
             "total": false,
-            "values": false,
-            "alignAsTable": true,
-            "rightSide": true
+            "values": false
           },
           "lines": true,
           "linewidth": 2,
@@ -654,7 +646,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "collectd_cpu{type=~\"user\",cpu=~\".\"}",
+              "expr": "collectd_cpu_percent{type=~\"user\",cpu=~\".\"}",
               "intervalFactor": 2,
               "metric": "collectd_cpu",
               "refId": "A",
@@ -1043,7 +1035,7 @@
   },
   "refresh": false,
   "schemaVersion": 12,
-  "version": 46,
+  "version": 50,
   "links": [],
   "gnetId": null
 }
