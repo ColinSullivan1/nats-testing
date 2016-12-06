@@ -18,6 +18,7 @@ import (
 
 var trace bool
 var verbose bool
+var singleSubj bool
 
 func verbosef(format string, v ...interface{}) {
 	if verbose {
@@ -90,8 +91,14 @@ func run(url, monURL, subject string, subcount int, isVerbose, isTraceVerbose bo
 		log.Fatalf("Couldn't connect:  %v\n", err)
 	}
 
+	var subj string
 	for i := 1; i <= subcount; i++ {
-		_, err = createSubscription(nc, fmt.Sprintf("%s.%d", subject, i))
+		if singleSubj {
+			subj = subject
+		} else {
+			subj = fmt.Sprintf("%s.%d", subject, i)
+		}
+		_, err = createSubscription(nc, subj)
 		if err != nil {
 			log.Fatalf("Couldn't subscribe:  %v\n", err)
 		}
@@ -149,10 +156,12 @@ func main() {
 	var sc = flag.Int("subcount", 10000000, "number of subscribers")
 	var vb = flag.Bool("V", false, "Verbose")
 	var tb = flag.Bool("DV", false, "Verbose/Trace")
+	var ss = flag.Bool("oneSubj", false, "Use a single subject.")
 
 	log.SetFlags(0)
 	flag.Parse()
 
+	singleSubj = *ss
 	mu := *murl + "/varz"
 
 	run(*url, mu, *su, *sc, *vb, *tb)
