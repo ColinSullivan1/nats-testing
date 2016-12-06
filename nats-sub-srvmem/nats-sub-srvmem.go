@@ -102,7 +102,7 @@ func run(url, monURL, subject string, subcount int, isVerbose, isTraceVerbose bo
 		if err != nil {
 			log.Fatalf("Couldn't subscribe:  %v\n", err)
 		}
-		if i%25000 == 0 {
+		if i%500000 == 0 {
 			if err := printServerRSS(monURL, i); err != nil {
 				log.Fatalf("Couldn't get server memory: %v", err)
 			}
@@ -153,7 +153,7 @@ func main() {
 	var url = flag.String("url", "nats://localhost:4222", "nats server url")
 	var murl = flag.String("murl", "http://localhost:6060", "Monitor url")
 	var su = flag.String("subject", "foo", "base subject to use")
-	var sc = flag.Int("subcount", 10000000, "number of subscribers")
+	var sc = flag.Int("subcount", 30000000, "number of subscribers")
 	var vb = flag.Bool("V", false, "Verbose")
 	var tb = flag.Bool("DV", false, "Verbose/Trace")
 	var ss = flag.Bool("oneSubj", false, "Use a single subject.")
