@@ -11,7 +11,7 @@
       "username": "colin",
       "password": "password",
       "pub_msgsize": 512,
-      "pub_delay":  "1ms",
+      "pub_delay":  "1100us",
       "pub_msgcount": 1000000,
       "pub_subject": "foo.0.0",
       "subscriptions": null
@@ -22,7 +22,7 @@
       "username": "colin",
       "password": "password",
       "pub_msgsize": 512,
-      "pub_delay":  "1ms",
+      "pub_delay":  "1100us",
       "pub_msgcount": 1000000,
       "pub_subject": "foo.0.1",
       "subscriptions": null
@@ -33,7 +33,7 @@
       "username": "colin",
       "password": "password",
       "pub_msgsize": 512,
-      "pub_delay":  "1ms",
+      "pub_delay":  "1100us",
       "pub_msgcount": 1000000,
       "pub_subject": "foo.0.2",
       "subscriptions": null
@@ -44,7 +44,7 @@
       "username": "colin",
       "password": "password",
       "pub_msgsize": 512,
-      "pub_delay":  "1ms",
+      "pub_delay":  "1100us",
       "pub_msgcount": 1000000,
       "pub_subject": "foo.0.3",
       "subscriptions": null
@@ -55,22 +55,11 @@
       "username": "colin",
       "password": "password",
       "pub_msgsize": 512,
-      "pub_delay":  "1ms",
+      "pub_delay":  "1100us",
       "pub_msgcount": 1000000,
       "pub_subject": "foo.0.4",
       "subscriptions": null
-    },
-    {
-      "name": "pub-foo-5",
-      "instances": 1,
-      "username": "colin",
-      "password": "password",
-      "pub_msgsize": 512,
-      "pub_delay":  "1ms",
-      "pub_msgcount": 1000000,
-      "pub_subject": "foo.0.5",
-      "subscriptions": null
-    },  
+    }, 
     {
       "name": "sub",
       "instances": 5,
@@ -100,10 +89,6 @@
         {
           "count": 1000000,
           "subject": "foo.0.4"
-        },
-        {
-          "count": 1000000,
-          "subject": "foo.0.5"
         }
       ]
     }
