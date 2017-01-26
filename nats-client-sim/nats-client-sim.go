@@ -72,14 +72,14 @@ type ClientSub struct {
 	subject  string
 	sub      *nats.Subscription
 	ch       chan (bool)
-	received int32
-	max      int32
+	received int64
+	max      int64
 	isDone   bool
 }
 
 // GetReceivedCount returns the count of received messages
-func (cs *ClientSub) GetReceivedCount() int32 {
-	return atomic.LoadInt32(&cs.received)
+func (cs *ClientSub) GetReceivedCount() int64 {
+	return atomic.LoadInt64(&cs.received)
 }
 
 // Client represents a NATS streaming client
@@ -91,7 +91,7 @@ type Client struct {
 	hasUniqueSubjects bool
 	nc                *nats.Conn
 	subs              []*ClientSub
-	publishCount      int32
+	publishCount      int64
 	publishDelay      time.Duration
 	subCh             chan (bool)
 	payload           []byte
@@ -134,7 +134,7 @@ func (c *Client) connect() error {
 	// a stress test.
 	if err != nil {
 		for i := 0; i < 50; i++ {
-			log.Printf("%s:  retrying initial connect.  %v\n", c.clientID, err)
+			log.Printf("%s:  retrying initial connect to %s.  %v\n", c.clientID, opts.Servers, err)
 			time.Sleep(100 * time.Millisecond)
 			c.nc, err = opts.Connect()
 			if err == nil {
@@ -167,17 +167,17 @@ func nextGlobalUniqueSubject() string {
 func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	csub := &ClientSub{}
 	csub.ch = make(chan bool)
-	csub.max = int32(configSub.Count)
+	csub.max = int64(configSub.Count)
 	csub.subject = configSub.Subject
 
 	// unique callback per sub
 	mh := func(msg *nats.Msg) {
-		val := atomic.AddInt32(&csub.received, 1)
+		val := atomic.AddInt64(&csub.received, 1)
 		if trace {
 			log.Printf("%s: Received message %d on %s.\n", c.clientID,
 				val, msg.Subject)
 		}
-		if val == csub.max {
+		if csub.max > 0 && val == csub.max {
 			verbosef("%s: Done receiving messages on subject %s.", c.clientID, msg.Subject)
 			csub.ch <- true
 		}
@@ -211,7 +211,7 @@ func (c *Client) isSubscriber() bool {
 }
 
 func (c *Client) isPublisher() bool {
-	return c.config.PubMsgCount > 0
+	return c.config.PubMsgCount != 0
 }
 
 func (c *Client) createSubscriptions() {
@@ -232,18 +232,32 @@ func (c *Client) publishSubjectMsgs() {
 	count := c.config.PubMsgCount
 	subject := c.config.PublishSubject
 
-	for i := 0; i < count; i++ {
-		c.publishMessage(subject)
+	if count < 0 {
+		for {
+			c.publishMessage(subject)
+		}
+	} else {
+		for i := 0; i < count; i++ {
+			c.publishMessage(subject)
+		}
 	}
 }
 
 func (c *Client) publishUniqueMessages() {
 	count := c.config.PubMsgCount
-	for i := 0; i < count; i++ {
+	if count < 0 {
 		// use the current unique subject ID.
 		for j := int32(1); j <= currentSubjectID; j++ {
 			subject := nextUniqueSubject(j)
 			c.publishMessage(subject)
+		}
+	} else {
+		for i := 0; i < count; i++ {
+			// use the current unique subject ID.
+			for j := int32(1); j <= currentSubjectID; j++ {
+				subject := nextUniqueSubject(j)
+				c.publishMessage(subject)
+			}
 		}
 	}
 }
@@ -271,20 +285,20 @@ func (c *Client) publishMessage(subject string) {
 
 	c.delayPublish()
 
-	atomic.AddInt32(&c.publishCount, 1)
+	atomic.AddInt64(&c.publishCount, 1)
 	err = c.nc.Publish(subject, c.payload)
 	if err != nil {
 		log.Fatalf("%s: Error publishing: %v.\n", c.clientID, err)
 	}
 	if trace {
 		log.Printf("%s: Success sending msg # %d to %s.\n", c.clientID,
-			atomic.LoadInt32(&c.publishCount), subject)
+			atomic.LoadInt64(&c.publishCount), subject)
 	}
 }
 
 // Publish publishes client messages
 func (c *Client) Publish() {
-	verbosef("%s: Started publishing.\n", c.clientID)
+	verbosef("%s: Started publishing %d msgs.\n", c.clientID, c.publishCount)
 
 	c.payload = c.cm.payloadBuffer[:c.config.PubMsgSize]
 
@@ -303,8 +317,8 @@ func (c *Client) Publish() {
 }
 
 // GetPublishCount returns the current count of published messages
-func (c *Client) GetPublishCount() int32 {
-	return atomic.LoadInt32(&c.publishCount)
+func (c *Client) GetPublishCount() int64 {
+	return atomic.LoadInt64(&c.publishCount)
 }
 
 // Run connects a client to to the NATS streaming server, starts the subscribers, then
@@ -568,8 +582,8 @@ func (cm *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int) {
 func (cm *ClientManager) PrintReport(activeOnly bool) {
 	var line string
 	var count int
-	var tsent int32
-	var trecv int32
+	var tsent int64
+	var trecv int64
 
 	cm.Lock()
 	defer cm.Unlock()

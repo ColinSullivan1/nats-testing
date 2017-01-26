@@ -16,4 +16,4 @@ scrape_configs:
     scrape_interval: 5s
 
     static_configs:
-      - targets: ['ec2-54-89-243-31.compute-1.amazonaws.com:9103']
+      - targets: ['localhost:7777']
