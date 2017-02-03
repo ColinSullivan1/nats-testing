@@ -1,0 +1,96 @@
+{
+  "client_start_delay_max": 5,
+  "tlsca": "",
+  "tlscert": "",
+  "tlskey": "",
+  "usetls": true,
+  "clients": [
+    {
+      "name": "pub-foo-0",
+      "instances": 1,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay":  "0",
+      "pub_msgcount": -1,
+      "pub_subject": "foo.0.0",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-1",
+      "instances": 1,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay":  "0",
+      "pub_msgcount": -1,
+      "pub_subject": "foo.0.1",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-2",
+      "instances": 1,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay":  "0",
+      "pub_msgcount": -1,
+      "pub_subject": "foo.0.2",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-3",
+      "instances": 1,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay":  "0",
+      "pub_msgcount": -1,
+      "pub_subject": "foo.0.3",
+      "subscriptions": null
+    },
+    {
+      "name": "pub-foo-4",
+      "instances": 1,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 512,
+      "pub_delay":  "0",
+      "pub_msgcount": -1,
+      "pub_subject": "foo.0.4",
+      "subscriptions": null
+    }, 
+    {
+      "name": "sub",
+      "instances": 5,
+      "username": "colin",
+      "password": "password",
+      "pub_msgsize": 0,
+      "pub_delay": "",
+      "pub_msgcount": 0,
+      "pub_subject": "",
+      "subscriptions": [
+        {
+          "count": -1,
+          "subject": "foo.0.0"
+        },       
+        {
+          "count": -1,
+          "subject": "foo.0.1"
+        },
+        {
+          "count": -1,
+          "subject": "foo.0.2"
+        },
+        {
+          "count": -1,
+          "subject": "foo.0.3"
+        },
+        {
+          "count": -1,
+          "subject": "foo.0.4"
+        }
+      ]
+    }
+  ]
+}
