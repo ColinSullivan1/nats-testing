@@ -3,7 +3,7 @@
   "tlsca": "server/ca.pem",
   "tlscert": "server/client-cert.pem",
   "tlskey": "server/client-key.pem",
-  "Xusetls": true,
+  "usetls": true,
   "clients": [
     {
       "name": "pub-foo-0",
