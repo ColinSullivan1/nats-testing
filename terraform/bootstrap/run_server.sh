@@ -3,7 +3,6 @@
 . ./setenv.sh
 
 echo "Starting NATS server process."
-export
 gnatsd -version
 gnatsd -config gnatsd.conf 2>server.err 1>server.out &
 echo "Started NATS server."

@@ -10,7 +10,7 @@ resource "packet_project" "latency" {
 
 # Create a device for the server and add it to our project
 resource "packet_device" "nats_server_a" {
-  hostname         = "nats.server.a"
+  hostname         = "servera.latency.nats.com"
   plan             = "${var.latency_server_type}"
   facility         = "sjc1"
   operating_system = "ubuntu_18_04"
@@ -37,7 +37,7 @@ resource "packet_device" "nats_server_a" {
 }
 
 resource "packet_device" "nats_server_b" {
-  hostname         = "nats.server.b"
+  hostname         = "serverb.latency.nats.com"
   plan             = "${var.latency_server_type}"
   facility         = "sjc1"
   operating_system = "ubuntu_18_04"
@@ -66,7 +66,7 @@ resource "packet_device" "nats_server_b" {
 # Create devices for the latency clients and add it to our
 # project
 resource "packet_device" "nats_client" {
-  hostname         = "nats.client"
+  hostname         = "client.latency.nats.com"
   plan             = "${var.latency_client_type}"
   facility         = "sjc1"
   operating_system = "ubuntu_18_04"
@@ -108,8 +108,8 @@ resource "null_resource" "client_update_hosts" {
   provisioner "remote-exec" {
     # Add private_ip of each server in the cluster
     inline = [
-      "echo '${lookup(packet_device.nats_server_a.0.network[2], "address")} servera nats.server.a' >> /etc/hosts ",
-      "echo '${lookup(packet_device.nats_server_b.0.network[2], "address")} serverb nats.server.b' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_server_a.0.network[2], "address")} servera servera.latency.nats.com' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_server_b.0.network[2], "address")} serverb serverb.latency.nats.com' >> /etc/hosts ",
     ]
   }
 }
@@ -134,8 +134,8 @@ resource "null_resource" "server_a_update_hosts" {
   provisioner "remote-exec" {
     # Add private_ip of each server in the cluster
     inline = [
-      "echo '${lookup(packet_device.nats_client.0.network[2], "address")} servera nats.server.a' >> /etc/hosts ",
-      "echo '${lookup(packet_device.nats_server_b.0.network[2], "address")} serverb nats.server.b' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_client.0.network[2], "address")}  lclient client.latency.nats.com' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_server_b.0.network[2], "address")} serverb serverb.latency.nats.com' >> /etc/hosts ",
       "~/run_server.sh",
     ]
   }
@@ -157,8 +157,8 @@ resource "null_resource" "server_b_update_hosts" {
   provisioner "remote-exec" {
     # Add private_ip of each server in the cluster
     inline = [
-      "echo '${lookup(packet_device.nats_client.0.network[2], "address")} servera nats.server.a' >> /etc/hosts ",
-      "echo '${lookup(packet_device.nats_server_a.0.network[2], "address")} serverb nats.server.b' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_client.0.network[2], "address")} lclient client.latency.nats.com' >> /etc/hosts ",
+      "echo '${lookup(packet_device.nats_server_a.0.network[2], "address")} servera servera.latency.nats.com' >> /etc/hosts ",
       "~/run_server.sh",
     ]
   }

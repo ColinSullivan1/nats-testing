@@ -17,7 +17,7 @@ variable auth_token {}
 # "baremetal_1e", "x1.small.x86","Our Type 1e ...",
 
 variable latency_server_type {
-  default = "c2.medium.x86"
+  default = "baremetal_1"
 }
 
 variable latency_client_type {

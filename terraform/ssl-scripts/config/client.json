@@ -1,0 +1,18 @@
+{
+    "CN": "nats server",
+    "hosts": [
+        "*.latency.nats.com",
+        "client.latency.nats.com"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "US",
+            "L": "CA",
+            "ST": "Los Angeles"
+        }
+    ]
+}
