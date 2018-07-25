@@ -10,13 +10,16 @@ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=config/ca-config.json -profi
 
 # Copy files
 cp ca.pem ../servera/
-cp servera-key.pem ../servera
-cp servera.pem ../servera
+mv servera-key.pem ../servera
+mv servera.pem ../servera
 
 cp ca.pem ../serverb
-cp serverb-key.pem ../serverb
-cp serverb.pem ../serverb
+mv serverb-key.pem ../serverb
+mv serverb.pem ../serverb
 
 cp ca.pem ../client
-cp serverb-key.pem ../client
-cp serverb.pem ../client
+mv client-key.pem ../client
+mv client.pem ../client
+
+rm ca.pem ca-key.pem *.csr
+
