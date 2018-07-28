@@ -112,6 +112,8 @@ resource "null_resource" "client_update_hosts" {
       "echo '${lookup(packet_device.nats_server_b.0.network[2], "address")} serverb serverb.latency.nats.com' >> /etc/hosts ",
     ]
   }
+
+  depends_on = ["packet_device.nats_server_a", "packet_device.nats_server_b", "packet_device.nats_client"]
 }
 
 ##
@@ -139,6 +141,8 @@ resource "null_resource" "server_a_update_hosts" {
       "~/run_server.sh",
     ]
   }
+
+  depends_on = ["packet_device.nats_server_a", "packet_device.nats_server_b", "packet_device.nats_client"]
 }
 
 resource "null_resource" "server_b_update_hosts" {
@@ -162,4 +166,30 @@ resource "null_resource" "server_b_update_hosts" {
       "~/run_server.sh",
     ]
   }
+
+  depends_on = ["packet_device.nats_server_a", "packet_device.nats_server_b", "packet_device.nats_client"]
+}
+
+// Runs the test script when everything is setup.
+resource "null_resource" "client_run_tests" {
+  # Not perfect, but any changes to any instance of the machines   # requires updates
+
+  triggers {
+    cluster_instance_ids = "${packet_device.nats_client.id}, ${packet_device.nats_server_a.id}, ${packet_device.nats_server_b.id}"
+  }
+
+  # Bootstrap script can run on any instance of the cluster
+  # So we just choose the first in this case
+  connection {
+    host = "${lookup(packet_device.nats_client.0.network[0], "address")}"
+  }
+
+  provisioner "remote-exec" {
+    # run the latency tests
+    inline = [
+      "~/run_tests.sh",
+    ]
+  }
+
+  depends_on = ["null_resource.server_a_update_hosts", "null_resource.server_b_update_hosts", "null_resource.client_update_hosts"]
 }
