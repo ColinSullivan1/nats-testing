@@ -19,12 +19,12 @@ resource "packet_device" "nats_server_a" {
 
   # Copy our install scripts to the machine
   provisioner "file" {
-    source      = "bootstrap/"
+    source      = "../bootstrap/"
     destination = "~/"
   }
 
   provisioner "file" {
-    source      = "servera/"
+    source      = "../servera/"
     destination = "~/"
   }
 
@@ -46,12 +46,12 @@ resource "packet_device" "nats_server_b" {
 
   # Copy our install script to the machine
   provisioner "file" {
-    source      = "bootstrap/"
+    source      = "../bootstrap/"
     destination = "~/"
   }
 
   provisioner "file" {
-    source      = "serverb/"
+    source      = "../serverb/"
     destination = "~/"
   }
 
@@ -75,12 +75,12 @@ resource "packet_device" "nats_client" {
 
   # Copy our install script to the machine
   provisioner "file" {
-    source      = "bootstrap/"
+    source      = "../bootstrap/"
     destination = "~/"
   }
 
   provisioner "file" {
-    source      = "client/"
+    source      = "../client/"
     destination = "~/"
   }
 
