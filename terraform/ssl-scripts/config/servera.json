@@ -2,7 +2,8 @@
     "CN": "nats server",
     "hosts": [
         "*.latency.nats.com",
-        "servera.latency.nats.com"
+        "servera.latency.nats.com",
+        "servera"
     ],
     "key": {
         "algo": "rsa",
