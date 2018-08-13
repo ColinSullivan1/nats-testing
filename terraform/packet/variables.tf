@@ -1,6 +1,9 @@
 # User must define this
 variable auth_token {}
 
+# project ID to use, found under project settings.  e.g. 9999999-abcd-ef00-1234-567abcde
+variable project_id {}
+
 #
 # Machine type reference (July 2018)
 #
@@ -16,14 +19,14 @@ variable auth_token {}
 # "baremetal_0","t1.small.x86", "Our Type 0 configuration is a general use \"cloud killer\" server, with a Intel Atom 2.4Ghz processor and 8GB of RAM.",
 # "baremetal_1e", "x1.small.x86","Our Type 1e ...",
 
-variable latency_server_type {
+variable server_type {
   default = "baremetal_1"
 }
 
-variable latency_client_type {
+variable client_type {
   default = "baremetal_1"
 }
 
-variable location {
+variable facility {
   default = "sjc1"
 }
