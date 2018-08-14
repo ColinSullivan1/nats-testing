@@ -11,7 +11,6 @@ function makeMachineCert() {
   echo making certs for "$nodename"
   mkdir -p $nodename 
   cd $nodename
-  export CAROOT=`pwd`
   mkcert $nodename
   ls
   echo mv $nodename*-key.pem ../../$nodename/$nodename-key.pem
