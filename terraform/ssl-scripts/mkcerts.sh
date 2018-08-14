@@ -3,20 +3,22 @@
 # Install using instructions here:  https://github.com/FiloSottile/mkcert
 
 nodename="unset"
+mkdir ca_cert
+export CAROOT=`pwd`/ca_cert
+mkcert -install
 
 function makeMachineCert() {
   echo making certs for "$nodename"
   mkdir -p $nodename 
   cd $nodename
   export CAROOT=`pwd`
-  mkcert $nodename.latency.nats.com latency.nats.com '*.latency.nats.com' $nodename 127.0.0.1 localhost
+  mkcert $nodename
   ls
-  echo mv $nodename.latency.nats.*-key.pem ../../$nodename/$nodename-key.pem
-  mv $nodename.latency.nats.*-key.pem ../../$nodename/$nodename-key.pem
-  echo mv $nodename.latency.nats.*.pem ../../$nodename/$nodename.pem
-  mv $nodename.latency.nats.*.pem ../../$nodename/$nodename.pem
-  mv rootCA.pem ../../$nodename/ca.pem
-  mv rootCA-key.pem rootCA-key.pem.bak
+  echo mv $nodename*-key.pem ../../$nodename/$nodename-key.pem
+  mv $nodename*-key.pem ../../$nodename/$nodename-key.pem
+  echo mv $nodename*.pem ../../$nodename/$nodename.pem
+  mv $nodename*.pem ../../$nodename/$nodename.pem
+  cp -f ../ca_cert/rootCA.pem ../../$nodename/ca.pem
   cd ..
 }
 
