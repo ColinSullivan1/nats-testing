@@ -7,14 +7,17 @@
             "server": {
                 "expiry": "43800h",
                 "usages": [
+                    "any",
                     "signing",
                     "key encipherment",
-                    "server auth"
+                    "server auth",
+                    "client auth"
                 ]
             },
             "client": {
                 "expiry": "43800h",
                 "usages": [
+                    "any",
                     "signing",
                     "key encipherment",
                     "client auth"
@@ -23,6 +26,7 @@
             "route": {
                 "expiry": "43800h",
                 "usages": [
+                    "any",
                     "signing",
                     "key encipherment",
                     "server auth",
