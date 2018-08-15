@@ -1,12 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 . ./setenv.sh
 
 echo "Starting NATS server process."
-gnatsd -version
-gnatsd -config gnatsd.conf 2>server.err 1>server.out &
+gnatsd -config gnatsd.conf -DV 2>server.err 1>server.out &
+disown
 echo "Started NATS server."
-
-# This sleep is a hack to allow terraform to start the NATS server
-# in a background process.
-sleep 2 
+sleep 5
