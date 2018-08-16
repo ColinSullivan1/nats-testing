@@ -3,7 +3,10 @@
     "hosts": [
         "*.latency.nats.com",
         "servera.latency.nats.com",
-        "servera"
+        "servera",
+        "servera.c.nats-latency-testing.internal",        
+        "c.nats-latency-testing.internal",
+        "*.c.nats-latency-testing.internal"        
     ],
     "key": {
         "algo": "rsa",

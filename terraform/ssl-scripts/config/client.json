@@ -2,6 +2,7 @@
     "CN": "nats server",
     "hosts": [
         "*.latency.nats.com",
+        "client.latency.nats.com",
         "client",
         "client.c.nats-latency-testing.internal",        
         "c.nats-latency-testing.internal",
