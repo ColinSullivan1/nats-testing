@@ -52,6 +52,7 @@ resource "google_compute_instance" "servera" {
 resource "google_compute_instance" "serverb" {
    name = "serverb"
    machine_type = "${var.server_type}"
+   min_cpu_platform = "${var.min_cpu_platform}"
    zone = "${var.zone}"
    boot_disk {
       initialize_params {
@@ -74,6 +75,7 @@ resource "google_compute_instance" "serverb" {
 resource "google_compute_instance" "client" {
    name = "client"
    machine_type = "${var.client_type}"
+   min_cpu_platform = "${var.min_cpu_platform}"
    zone = "${var.zone}"
    boot_disk {
       initialize_params {

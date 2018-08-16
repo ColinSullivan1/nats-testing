@@ -51,6 +51,16 @@ variable client_type {
   default = "n1-highcpu-2"
 }
 
+# CPU Platform options include:
+# Intel Xeon E5 (Sandy Bridge) processors: "Intel Sandy Bridge"
+# Intel Xeon E5 v2 (Ivy Bridge) processors: "Intel Ivy Bridge"
+# Intel Xeon E5 v3 (Haswell) processors: "Intel Haswell"
+# Intel Xeon E5 v4 (Broadwell) processors: "Intel Broadwell"
+# Intel Xeon (Skylake) processors: "Intel Skylake"
+variable min_cpu_platform {
+  default = "Intel Skylake"
+}
+
 variable zone {
   default = "us-west2-a"
 }
