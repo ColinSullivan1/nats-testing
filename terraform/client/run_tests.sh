@@ -2,43 +2,27 @@
 
 . ./setenv.sh
 
-dur="5s"
+dur="1s"
+tlsvars="--secure"
+
+runtest() {
+    latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz $msgsize -tr $msgrate -tt $dur -hist lat_${msgsize}b_by_${msgrate}_mps
+}
 
 #
-# Run each test three times.  The best of three will be reported.
+# for each message size we want to test, run iterations of different rates
 #
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 1000 -tt $dur -hist lat_256b_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 1000 -tt $dur -hist lat_256b_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 1000 -tt $dur -hist lat_256b_1kmps
+declare -a arr=("256" "512" "1024" "4096")
+for i in "${arr[@]}"
+do
+   msgsize="$i"
 
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 10000 -tt $dur -hist lat_256b_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 10000 -tt $dur -hist lat_256b_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 10000 -tt $dur -hist lat_256b_10kmps
+   msgrate="1000"
+   runtest
 
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 100000 -tt $dur -hist lat_256b_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 100000 -tt $dur -hist lat_256b_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 256 -tr 100000 -tt $dur -hist lat_256b_100kmps
+   msgrate="10000"
+   runtest
 
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 1000 -tt $dur -hist lat_1k_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 1000 -tt $dur -hist lat_1k_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 1000 -tt $dur -hist lat_1k_1kmps
-
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 10000 -tt $dur -hist lat_1k_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 10000 -tt $dur -hist lat_1k_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 10000 -tt $dur -hist lat_1k_10kmps
-
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 100000 -tt $dur -hist lat_1k_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 100000 -tt $dur -hist lat_1k_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 1024 -tr 100000 -tt $dur -hist lat_1k_100kmps
-
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 1000 -tt $dur -hist lat_4k_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 1000 -tt $dur -hist lat_4k_1kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 1000 -tt $dur -hist lat_4k_1kmps
-
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 10000 -tt $dur -hist lat_4k_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 10000 -tt $dur -hist lat_4k_10kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 10000 -tt $dur -hist lat_4k_10kmps
-
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 100000 -tt $dur -hist lat_4k_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 100000 -tt $dur -hist lat_4k_100kmps
-latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz 4096 -tr 100000 -tt $dur -hist lat_4k_100kmps
+   msgrate="100000"
+   runtest
+done
