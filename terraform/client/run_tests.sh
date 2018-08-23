@@ -3,10 +3,10 @@
 . ./setenv.sh
 
 dur="1s"
-tlsvars="--secure"
+tlsvars="--secure -tls_ca ca.pem -tls_cert client.pem -tls_key client-key.pem"
 
 runtest() {
-    latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz $msgsize -tr $msgrate -tt $dur -hist lat_${msgsize}b_by_${msgrate}_mps
+    latency-tests -sa nats://luser:top_secret@servera:4222 -sb nats://luser:top_secret@serverb:4222 -sz $msgsize -tr $msgrate -tt $dur $tlsvars -hist lat_${msgsize}b_by_${msgrate}_mps
 }
 
 #
