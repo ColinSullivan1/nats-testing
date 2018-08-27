@@ -1,20 +1,12 @@
 
-# Use Terraform to install and run the NATS cluster latency test
+# NATS Latency Testing on Packet
 
-# Packet API Key
+## Getting started
 
-Setup a packet account.  Once you have generated an API key from the user profile or
-project section of your packet account, you'll need to set the following variables.  
-
-This can be done by creating a 'terraform.tfvars' in this directory with the following
-variable defined:
-
-```text
-auth_token = "<your auth token>"
-project_id = "<your project id">
-```
-
-# Provisioning the machine instances
+You'll need a packet account and and project setup to run the latency tests.
+Once you have generated an API key from the user profile or project section
+of your Packet account, you'll need to set the `auth_token` and `project_id`
+variables.  More on that below.
 
 ## First time Usage
 
@@ -23,59 +15,28 @@ From this directory, to provision the test instances, simply run the command:
 
 This will setup the latency tests described in the higher level terraform [README.md](../readme.md).
 
-* Create a `NATS Latency Testing` project in packet
-* Add a server machine, `servera`
-* Add a server machine, `serverb`
-* Add a client machine, `client`
-* Install scripts, SSL certificates, and relevant configuration files
-* Route the servers to each other
-* Launch the NATS servers
-* Print relevant information.
+## Setting up and running the test
 
-This sets up a latency test that can be envisioned as a triangle.  
+Once all of the permissions and keys are setup, you can run the test.  From this
+directory, run `terraform apply`.
+
+## Variables
+
+You can enter the variables via command line, manually when you run the test,
+or create a `terraform.tfvars` file with your variables required to run. You
+can override other variables found in [variables.tf](variables.tf)
+
+Different machine instances can be selected using the `server_type`
+and `client_type` variables. e.g.  Descriptions of available machines can
+be found in comments of the `variables.tf` file, although you may want to
+check for updates.  More information on terraform packet device types can
+be found [here](https://www.terraform.io/docs/providers/packet/r/device.html)
+
+Here is an example:
 
 ```text
-Server A - - - - - Server B
-    \                /
-     \              /
-      \            /
-       \          /
-        \        /
-    Latency Test (client)
+auth_token="AB23cdeFFgH123lmnopQRstuv134wxyz"
+server_type = "baremetal_0"
+client_type = "baremetal_1"
+project_id="1234567a-1aa1-2bb2-3c3c-0n0a0t0s0ZZZ"
 ```
-
-## Why the latency client on its own machine
-
-This is the best way to measure end to end latency with respect to timing.  As we
-are in the low microsecond range of measurements and measuring tail latency
-on higher end machines, we need to very accurately measure time deltas.
-This either requires a) sophisticated kernal time syncronization of a machine
-provisioned in the cloud, or b) use the same kernel instance to measure time.
-In the interest of simplicity and brevity, we chose "b".
-
-# Selecting different machine instances
-
-You can select different machine instances using the `latency_server_type` 
-and `latency_client_type` variables. e.g.
-
-latency_server_type = "baremetal_1"
-latency_client_type = "baremetal_1"
-
-Descriptions of available machines can be found in [variables.tf]("./variables.tf"),
-although you may want to check for updates.  More information on terraform
-packet device types can be found [here](https://www.terraform.io/docs/providers/packet/r/device.html).
-
-# Running the tests
-
-Right now, while machine provisioning and server routing are automatic, the tests
-are run manually.
-
-## Testing the setup
-
-
-## Manually running the tests
-
-ssh to the packet client machine
-
-
-
