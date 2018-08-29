@@ -40,3 +40,11 @@ server_type = "baremetal_0"
 client_type = "baremetal_1"
 project_id="1234567a-1aa1-2bb2-3c3c-0n0a0t0s0ZZZ"
 ```
+
+## Running the tests
+
+To run the default tests simply run:
+`ssh root@<client IP> "~/run_tests.sh"`
+
+This assumes you have added your key to your local keychain.  If not you
+may need to use the `-i` option or ssh into the client machine directly.

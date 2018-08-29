@@ -204,29 +204,3 @@ resource "null_resource" "serverb_update" {
 
   depends_on = ["google_compute_instance.serverb"]
 }
-
-// Runs the test script when everything is setup.
-resource "null_resource" "client_run_tests" {
-  # Not perfect, but any changes to any instance of the machines 
-  triggers {
-    cluster_instance_ids = "${google_compute_instance.client.id}, ${google_compute_instance.servera.id}, ${google_compute_instance.serverb.id}"
-  }
-
-  # Bootstrap script can run on any instance of the cluster
-  # So we just choose the first in this case
-  connection {
-       host = "${google_compute_instance.client.network_interface.0.access_config.0.nat_ip}"
-       type = "ssh"
-       user = "${var.username}"
-       private_key = "${file("${var.private_key_file}")}"
-  }
-
-  provisioner "remote-exec" {
-    # run the latency tests
-    inline = [
-      "/home/${var.username}/run_tests.sh",
-    ]
-  }
-
-  depends_on = ["null_resource.servera_update", "null_resource.serverb_update", "null_resource.client_update"]
-}

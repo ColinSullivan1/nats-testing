@@ -27,6 +27,22 @@ variable client_type {
   default = "baremetal_1"
 }
 
+# As of 8/28/2018
+# Toronto, ON, CA   "yyz1"
+# Tokyo, JP         "nrt1"
+# Atlanta, GA       "atl1"
+# Hong Kong 1, HK   "hkg1"
+# Los Angeles, CA   "lax1"
+# Dallas, TX        "dfw1"
+# Amsterdam, NL     "ams1"
+# Parsippany, NJ    "ewr1"
+# Singapore         "sin1"
+# Sydney, Australia "syd1"
+# Chicago, IL       "ord1"
+# Ashburn, VA       "iad1"
+# Sunnyvale, CA     "sjc1"
+# Frankfurt, DE     "fra1"
+# Seattle, WA       "sea1"
 variable facility {
   default = "sjc1"
 }
