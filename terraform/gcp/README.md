@@ -20,6 +20,8 @@ This will setup the latency tests described in the higher level terraform [READM
 Once all of the permissions and keys are setup, you can run the test.  From this
 directory, run `terraform apply`.
 
+Next, SSH to the client machine and run tests.  The `run_tests.sh` runs a series of tests and provides a good starting point.
+
 ### Variables
 
 You can enter the variables via command line, manually when you run the test, or create a `terraform.tfvars` file with your variables required to run.   You can override other

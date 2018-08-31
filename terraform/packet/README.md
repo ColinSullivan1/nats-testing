@@ -15,10 +15,12 @@ From this directory, to provision the test instances, simply run the command:
 
 This will setup the latency tests described in the higher level terraform [README.md](../readme.md).
 
-## Setting up and running the test
+## Setting up and running tests
 
 Once all of the permissions and keys are setup, you can run the test.  From this
 directory, run `terraform apply`.
+
+Next, SSH to the client machine and run tests.  The `run_tests.sh` runs a series of tests and provides a good starting point.
 
 ## Variables
 
