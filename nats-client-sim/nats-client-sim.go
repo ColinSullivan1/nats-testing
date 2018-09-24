@@ -37,6 +37,12 @@ func verbosef(format string, v ...interface{}) {
 	}
 }
 
+const fsecs = float64(time.Second)
+
+func rps(count int64, elapsed time.Duration) int {
+	return int(float64(count) / (float64(elapsed) / fsecs))
+}
+
 // ClientSubConfig represents a subscription for a client
 type ClientSubConfig struct {
 	Count   int    `json:"count"`
@@ -50,7 +56,7 @@ type ClientConfig struct {
 	UserName       string            `json:"username"`
 	Password       string            `json:"password"`
 	PubMsgSize     int               `json:"pub_msgsize"`
-	PubRate        string            `json:"pub_delay"`
+	PubRate        int               `json:"pub_msgs_sec"`
 	PubMsgCount    int               `json:"pub_msgcount"`
 	PublishSubject string            `json:"pub_subject"`
 	Subscriptions  []ClientSubConfig `json:"subscriptions"`
@@ -69,17 +75,28 @@ type Config struct {
 
 // ClientSub is a client subscription
 type ClientSub struct {
-	subject  string
-	sub      *nats.Subscription
-	ch       chan (bool)
-	received int64
-	max      int64
-	isDone   bool
+	subject   string
+	sub       *nats.Subscription
+	ch        chan (bool)
+	received  int64
+	max       int64
+	isDone    bool
+	startTime time.Time
+	stopTime  time.Time
 }
 
 // GetReceivedCount returns the count of received messages
 func (cs *ClientSub) GetReceivedCount() int64 {
 	return atomic.LoadInt64(&cs.received)
+}
+
+// GetSubActualMsgsPerSec gets the actual received message rate
+func (cs *ClientSub) GetSubActualMsgsPerSec() int {
+	count := atomic.LoadInt64(&cs.received)
+	if cs.isDone == false {
+		return rps(count, time.Now().Sub(cs.startTime))
+	}
+	return rps(count, cs.stopTime.Sub(cs.startTime))
 }
 
 // Client represents a NATS streaming client
@@ -90,11 +107,15 @@ type Client struct {
 	clientID          string
 	hasUniqueSubjects bool
 	nc                *nats.Conn
-	subs              []*ClientSub
-	publishCount      int64
-	publishDelay      time.Duration
-	subCh             chan (bool)
 	payload           []byte
+	publishCount      int64
+	publishRate       int
+	pubdelay          time.Duration
+	pubdone           bool
+	pubStartTime      time.Time
+	pubStopTime       time.Time
+	subCh             chan (bool)
+	subs              []*ClientSub
 	done              bool
 }
 
@@ -104,11 +125,34 @@ func NewClient(config *ClientConfig, instance int, cm *ClientManager) *Client {
 	c.cm = cm
 	c.config = config
 	c.clientID = fmt.Sprintf("%s-%d", c.config.Name, instance)
+	c.publishRate = config.PubRate
 
 	if c.isPublisher() {
-		c.publishDelay = parsePubRate(c.config.PubRate)
+		fmt.Printf("publishRate = %d\n", c.publishRate)
+		c.pubdelay = time.Second / time.Duration(c.publishRate)
 	}
 	return c
+}
+
+func disconnectedHandler(nc *nats.Conn) {
+	if nc.LastError() != nil {
+		log.Printf("connection %q has been disconnected: %v\n",
+			nc.Opts.Name, nc.LastError())
+	}
+}
+
+func reconnectedHandler(nc *nats.Conn) {
+	log.Printf("connection %q reconnected to NATS Server at %q\n",
+		nc.Opts.Name, nc.ConnectedUrl())
+}
+
+func closedHandler(nc *nats.Conn) {
+	verbosef("connection %q has been closed\n", nc.Opts.Name)
+}
+
+func errorHandler(nc *nats.Conn, sub *nats.Subscription, err error) {
+	log.Fatalf("asynchronous error on connection %s, subject %s: %s\n",
+		nc.Opts.Name, sub.Subject, err)
 }
 
 func (c *Client) connect() error {
@@ -145,6 +189,24 @@ func (c *Client) connect() error {
 	return err
 }
 
+// Stolen from nats-io/latency-testing.
+func (c *Client) adjustAndSleep() {
+	r := rps(c.publishCount, time.Since(c.pubStartTime))
+	adj := c.pubdelay / 20 // 5%
+	if adj == 0 {
+		adj = 1 // 1ns min
+	}
+	if r < c.publishRate {
+		c.pubdelay -= adj
+	} else if r > c.publishRate {
+		c.pubdelay += adj
+	}
+	if c.pubdelay < 0 {
+		c.pubdelay = 0
+	}
+	time.Sleep(c.pubdelay)
+}
+
 func (c *Client) close() {
 	c.closeSubscriptions()
 	c.nc.Close()
@@ -173,12 +235,16 @@ func (c *Client) createClientSubscription(configSub *ClientSubConfig) {
 	// unique callback per sub
 	mh := func(msg *nats.Msg) {
 		val := atomic.AddInt64(&csub.received, 1)
+		if val == 1 {
+			csub.startTime = time.Now()
+		}
 		if trace {
 			log.Printf("%s: Received message %d on %s.\n", c.clientID,
 				val, msg.Subject)
 		}
 		if csub.max > 0 && val == csub.max {
 			verbosef("%s: Done receiving messages on subject %s.", c.clientID, msg.Subject)
+			csub.stopTime = time.Now()
 			csub.ch <- true
 		}
 	}
@@ -211,7 +277,7 @@ func (c *Client) isSubscriber() bool {
 }
 
 func (c *Client) isPublisher() bool {
-	return c.config.PubMsgCount != 0
+	return c.publishRate > 0
 }
 
 func (c *Client) createSubscriptions() {
@@ -262,30 +328,11 @@ func (c *Client) publishUniqueMessages() {
 	}
 }
 
-func parsePubRate(durationStr string) time.Duration {
-	if durationStr == "" || durationStr == "0" {
-		return 0
-	}
-	duration, err := time.ParseDuration(durationStr)
-	if err != nil {
-		log.Fatalf("Expected duration to parse, e.g. '100ms'")
-	}
-	return duration
-}
-
-func (c *Client) delayPublish() {
-	if c.publishDelay == 0 {
-		return
-	}
-	time.Sleep(c.publishDelay)
-}
-
 func (c *Client) publishMessage(subject string) {
 	var err error
 
-	c.delayPublish()
-
 	atomic.AddInt64(&c.publishCount, 1)
+	c.adjustAndSleep()
 	err = c.nc.Publish(subject, c.payload)
 	if err != nil {
 		log.Fatalf("%s: Error publishing: %v.\n", c.clientID, err)
@@ -301,6 +348,7 @@ func (c *Client) Publish() {
 	verbosef("%s: Started publishing %d msgs.\n", c.clientID, c.publishCount)
 
 	c.payload = c.cm.payloadBuffer[:c.config.PubMsgSize]
+	c.pubStartTime = time.Now()
 
 	if c.publishUniqueSubjects() {
 		c.publishUniqueMessages()
@@ -310,6 +358,8 @@ func (c *Client) Publish() {
 	if err := c.nc.Flush(); err != nil {
 		log.Fatalf("%s: error flushing: %v", c.clientID, err)
 	}
+	c.pubStopTime = time.Now()
+	c.pubdone = true
 
 	verbosef("%s: Publishing complete.\n", c.clientID)
 
@@ -319,6 +369,16 @@ func (c *Client) Publish() {
 // GetPublishCount returns the current count of published messages
 func (c *Client) GetPublishCount() int64 {
 	return atomic.LoadInt64(&c.publishCount)
+}
+
+// GetPublishActualMsgsPerSec returns the actual (not configured) msgs/sec
+func (c *Client) GetPublishActualMsgsPerSec() int {
+	count := atomic.LoadInt64(&c.publishCount)
+	if c.done == false {
+		return rps(count, time.Now().Sub(c.pubStartTime))
+	}
+
+	return rps(count, c.pubStopTime.Sub(c.pubStartTime))
 }
 
 // Run connects a client to to the NATS streaming server, starts the subscribers, then
@@ -375,26 +435,26 @@ func GenerateDefaultConfigFile() ([]byte, error) {
 	cfg.Clients = make([]ClientConfig, 2)
 
 	cfg.Clients[0].Instances = 1
-	cfg.Clients[0].Name = "pub"
-	cfg.Clients[0].PubMsgCount = 100000
+	cfg.Clients[0].Name = "pub_1"
+	cfg.Clients[0].PubMsgCount = 10000
 	cfg.Clients[0].PubMsgSize = 128
-	cfg.Clients[0].PubRate = "0"
+	cfg.Clients[0].PubRate = 1000
 	cfg.Clients[0].PublishSubject = "foo"
 
 	cfg.Clients[1].Instances = 1
-	cfg.Clients[1].Name = "sub"
+	cfg.Clients[1].Name = "sub_1"
 	cfg.Clients[1].Subscriptions = make([]ClientSubConfig, 1)
-	cfg.Clients[1].Subscriptions[0].Count = 100000
+	cfg.Clients[1].Subscriptions[0].Count = 10000
 	cfg.Clients[1].Subscriptions[0].Subject = "foo"
 
 	raw, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal json: %v\n", err)
+		return nil, fmt.Errorf("could not marshal json: %v", err)
 	}
 
 	err = ioutil.WriteFile(DefaultConfigFileName, raw, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("could not write default config file: %v\n", err)
+		return nil, fmt.Errorf("could not write default config file: %v", err)
 	}
 
 	log.Printf("Generated default configuration file %s.\n", DefaultConfigFileName)
@@ -427,7 +487,7 @@ func getConfig(jsonString string) (*Config, error) {
 
 	err := json.Unmarshal([]byte(jsonString), config)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal json: %v\n", err)
+		return nil, fmt.Errorf("could not unmarshal json: %v", err)
 	}
 
 	return config, nil
@@ -602,16 +662,16 @@ func (cm *ClientManager) PrintReport(activeOnly bool) {
 		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2016-04-08 15:04:05"), c.clientID)
 		if c.isPublisher() {
 			tsent += c.GetPublishCount()
-			line += fmt.Sprintf(" pub: %s=(%d/%d)", c.config.PublishSubject,
-				c.GetPublishCount(), c.config.PubMsgCount)
+			line += fmt.Sprintf(" pub: %s=(%d/%d),(%d msgs/sec)", c.config.PublishSubject,
+				c.GetPublishCount(), c.config.PubMsgCount, c.GetPublishActualMsgsPerSec())
 		}
 
 		if c.isSubscriber() {
 			line += " subs:"
 			for _, csub := range c.subs {
 				trecv += csub.GetReceivedCount()
-				line += fmt.Sprintf(" %s=(%d/%d)", csub.subject,
-					csub.GetReceivedCount(), csub.max)
+				line += fmt.Sprintf(" %s=(%d/%d),(%d msgs/sec)", csub.subject,
+					csub.GetReceivedCount(), csub.max, csub.GetSubActualMsgsPerSec())
 			}
 		}
 
@@ -625,27 +685,6 @@ func (cm *ClientManager) PrintReport(activeOnly bool) {
 
 	log.Printf("%d of %d clients listed.", count, len(cm.clientsMap))
 	cm.printAggregateMsgRate(int(tsent), int(trecv))
-}
-
-func disconnectedHandler(nc *nats.Conn) {
-	if nc.LastError() != nil {
-		log.Printf("connection %q has been disconnected: %v\n",
-			nc.Opts.Name, nc.LastError())
-	}
-}
-
-func reconnectedHandler(nc *nats.Conn) {
-	log.Printf("connection %q reconnected to NATS Server at %q\n",
-		nc.Opts.Name, nc.ConnectedUrl())
-}
-
-func closedHandler(nc *nats.Conn) {
-	verbosef("connection %q has been closed\n", nc.Opts.Name)
-}
-
-func errorHandler(nc *nats.Conn, sub *nats.Subscription, err error) {
-	log.Fatalf("asynchronous error on connection %s, subject %s: %s\n",
-		nc.Opts.Name, sub.Subject, err)
 }
 
 func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int, url string) {
