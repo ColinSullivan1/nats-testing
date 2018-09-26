@@ -1,0 +1,27 @@
+{
+  "name": "simple",
+  "url": "nats://localhost:4222",
+  "duration": "1s",
+  "output_file": "simple_results.txt",
+  "client_start_delay_max": "1s",
+  "tlsca": "",
+  "tlscert": "",
+  "tlskey": "",
+  "usetls": false,
+  "clients": [
+    {
+      "name": "publisher",
+      "instances": 2,
+      "username": "",
+      "password": "",
+      "pub_msgsize": 128,
+      "pub_msgs_sec": 10000,
+      "pub_subject": "[HOSTNAME].[TESTNAME].foo.[INSTANCE]",
+      "subscriptions": [
+        {
+          "subject": "[HOSTNAME].[TESTNAME].foo.[INSTANCE]"
+        }
+      ]
+    }
+  ]
+}
