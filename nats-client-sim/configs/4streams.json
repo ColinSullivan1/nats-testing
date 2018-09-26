@@ -1,23 +1,33 @@
 {
-  "name": "simple",
+  "name": "four_streams",
   "url": "nats://localhost:4222",
-  "duration": "1s",
-  "output_file": "simple_results.json",
-  "prettyprint": true,
-  "client_start_delay_max": "1s",
+  "duration": "3s",
+  "output_file": "4streams_results.json",
+  "client_start_delay_max": "250ms",
   "tlsca": "",
   "tlscert": "",
   "tlskey": "",
   "usetls": false,
+  "prettyprint": true,
   "clients": [
     {
       "name": "publisher",
-      "instances": 1,
+      "instances": 4,
       "username": "",
       "password": "",
       "pub_msgsize": 128,
-      "pub_msgs_sec": 10000,
+      "pub_msgs_sec": 1000,
       "pub_subject": "[HOSTNAME].[TESTNAME].foo.[INSTANCE]",
+      "subscriptions": null
+    },
+    {
+      "name": "subscriber",
+      "instances": 4,
+      "username": "",
+      "password": "",
+      "pub_msgsize": 0,
+      "pub_msgs_sec": 0,
+      "pub_subject": "",
       "subscriptions": [
         {
           "subject": "[HOSTNAME].[TESTNAME].foo.[INSTANCE]"

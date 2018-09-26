@@ -544,7 +544,7 @@ func getConfig(jsonString string) (*Config, error) {
 // ClientManager tracks all clients
 type ClientManager struct {
 	sync.Mutex
-	clientsMap    map[string]*Client
+	clients       []*Client
 	config        *Config
 	pubCount      int
 	subCount      int
@@ -602,7 +602,6 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	cm.config = cfg
 	cm.printInterval = prIvl
 	cm.longReport = longReport
-	cm.clientsMap = make(map[string]*Client)
 
 	for i := 0; i < len(cfg.Clients); i++ {
 		for j := 0; j < cfg.Clients[i].Instances; j++ {
@@ -618,7 +617,7 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 				cm.subCount++
 			}
 
-			cm.clientsMap[cli.clientID] = cli
+			cm.clients = append(cm.clients, cli)
 			printClient(cli)
 		}
 	}
@@ -626,7 +625,7 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	cm.payloadBuffer = make([]byte, maxMsgSize)
 
 	printf("Creating %d simulated clients:  %d publishing / %d subscribing.\n",
-		len(cm.clientsMap), cm.pubCount, cm.subCount)
+		len(cm.clients), cm.pubCount, cm.subCount)
 
 	if cfg.TestDur != "" {
 		dur, err := time.ParseDuration(cfg.TestDur)
@@ -639,7 +638,7 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 			atomic.AddInt32(&testDone, 1)
 
 			// stop the subscriptions
-			for _, c := range cm.clientsMap {
+			for _, c := range cm.clients {
 				c.completeSubscribers()
 			}
 		}()
@@ -654,7 +653,7 @@ func (cm *ClientManager) RunClients() {
 	cm.pubDoneWg.Add(cm.pubCount)
 	cm.subDoneWg.Add(cm.subCount)
 
-	for _, c := range cm.clientsMap {
+	for _, c := range cm.clients {
 		go c.Run()
 	}
 	printf("Clients connecting.\n")
@@ -713,7 +712,7 @@ func (cm *ClientManager) displayClientsAndRates(activeOnly bool) {
 		printf("=== Only Active Clients are Shown.")
 	}
 
-	for _, c := range cm.clientsMap {
+	for _, c := range cm.clients {
 		c.Lock()
 		done := c.done
 		c.Unlock()
@@ -753,7 +752,7 @@ func (cm *ClientManager) displayRates() {
 	cm.Lock()
 	defer cm.Unlock()
 
-	for _, c := range cm.clientsMap {
+	for _, c := range cm.clients {
 		if c.isPublisher() {
 			tsent += c.GetPublishCount()
 		}
@@ -804,7 +803,7 @@ func (cm *ClientManager) NewSummaryRecord() *SummaryRecord {
 		tRecv    int // number of recv messages
 	)
 
-	for _, c := range cm.clientsMap {
+	for _, c := range cm.clients {
 		asCount += int(c.asCount)
 		dcCount += int(c.dcCount)
 		rcCount += int(c.rcCount)
@@ -834,7 +833,7 @@ func (cm *ClientManager) NewSummaryRecord() *SummaryRecord {
 		TotalDisconnects:  dcCount,
 		TotalReconnects:   rcCount,
 		TotalAsErrors:     asCount,
-		NumClients:        len(cm.clientsMap),
+		NumClients:        len(cm.clients),
 		NumPublishers:     numPubs,
 		NumSubscribers:    numSubs,
 		TotalMessagesSent: tSent,
@@ -916,6 +915,47 @@ func (cm *ClientManager) marshalObj(v interface{}) ([]byte, error) {
 	return raw, err
 }
 
+// JSONOutput is the pretty generated JSON output
+type JSONOutput struct {
+	Summary *SummaryRecord  `json:"summary"`
+	Clients []*ClientRecord `json:"clients"`
+}
+
+func (cm *ClientManager) writePretty(f *os.File) {
+	count := len(cm.clients)
+
+	jo := &JSONOutput{
+		Summary: cm.NewSummaryRecord(),
+		Clients: make([]*ClientRecord, count),
+	}
+	for i := 0; i < count; i++ {
+		jo.Clients[i] = cm.NewClientRecord(cm.clients[i])
+	}
+	raw, err := cm.marshalObj(jo)
+	if err != nil {
+		log.Fatalf("Couldn't marshal output: %v", err)
+	}
+	f.Write(raw)
+}
+
+func (cm *ClientManager) writeDevops(f *os.File) {
+	sr := cm.NewSummaryRecord()
+	raw, err := cm.marshalObj(sr)
+	if err != nil {
+		log.Fatalf("Couldn't marshal output: %v", err)
+	}
+	f.Write(raw)
+
+	for _, c := range cm.clients {
+		cr := cm.NewClientRecord(c)
+		raw, err := cm.marshalObj(cr)
+		if err != nil {
+			log.Fatalf("Couldn't marshal output: %v", err)
+		}
+		f.Write(raw)
+	}
+}
+
 func (cm *ClientManager) writeOutputFile() error {
 	of := cm.config.OutputFile
 	if of == "" {
@@ -930,20 +970,10 @@ func (cm *ClientManager) writeOutputFile() error {
 	}
 	defer f.Close()
 
-	sr := cm.NewSummaryRecord()
-	raw, err := cm.marshalObj(sr)
-	if err != nil {
-		log.Fatalf("Couldn't marshal output: %v", err)
-	}
-	f.Write(raw)
-
-	for _, c := range cm.clientsMap {
-		cr := cm.NewClientRecord(c)
-		raw, err := cm.marshalObj(cr)
-		if err != nil {
-			log.Fatalf("Couldn't marshal output: %v", err)
-		}
-		f.Write(raw)
+	if cm.config.PrettyPrint {
+		cm.writePretty(f)
+	} else {
+		cm.writeDevops(f)
 	}
 
 	return nil
@@ -953,7 +983,9 @@ func (cm *ClientManager) writeOutputFile() error {
 // Application flow
 //
 
-func printBanner(cfg *Config) {
+func (cm *ClientManager) printBanner() {
+	cfg := cm.config
+
 	of := cfg.OutputFile
 	if of == "" {
 		of = "(none)"
@@ -961,7 +993,7 @@ func printBanner(cfg *Config) {
 	printf("Test Name:   %s\n", cfg.Name)
 	printf("URLs:        %s\n", cfg.ServerURLs)
 	printf("Output File: %s\n", of)
-	printf("# Clients:   %d\n", len(cfg.Clients))
+	printf("# Clients:   %d\n", len(cm.clients))
 	printf("Duration:    %s\n", cfg.TestDur)
 	printf("===================================")
 }
@@ -969,6 +1001,9 @@ func printBanner(cfg *Config) {
 // run runs the application
 func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int) {
 	var err error
+
+	// for testing
+	atomic.StoreInt32(&testDone, 0)
 
 	verbose = isVerbose
 	if isTraceVerbose {
@@ -985,9 +1020,8 @@ func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl in
 		log.Fatalf("error loading configuration file:  %v\n", err)
 	}
 
-	printBanner(cfg)
-
 	cman := NewClientManager(cfg, prIvl, longReport)
+	cman.printBanner()
 	cman.RunClients()
 	cman.WaitForCompletion()
 	endTimer.Stop()
