@@ -1,8 +1,8 @@
 {
   "name": "fanout",
   "url": "nats://localhost:4222",
-  "duration": "10s",
-  "output_file": "fanout_results.json",
+  "duration": "3s",
+  "output_file": "fanout_1to100_results.json",
   "prettyprint": true,
   "client_start_delay_max": "250ms",
   "tlsca": "",
