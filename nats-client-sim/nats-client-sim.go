@@ -299,9 +299,9 @@ func (c *Client) connect() error {
 	// if we can't connect via error, keep trying - this is
 	// a stress test.
 	if err != nil {
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 100; i++ {
 			printf("%s:  retrying initial connect to %s.  %v\n", c.clientID, opts.Servers, err)
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond)
 			c.nc, err = opts.Connect()
 			if err == nil {
 				break
@@ -627,23 +627,6 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	printf("Creating %d simulated clients:  %d publishing / %d subscribing.\n",
 		len(cm.clients), cm.pubCount, cm.subCount)
 
-	if cfg.TestDur != "" {
-		dur, err := time.ParseDuration(cfg.TestDur)
-		if err != nil {
-			log.Fatalf("Unable to parse duration: %s", dur)
-		}
-		endTimer = time.NewTimer(dur)
-		go func() {
-			<-endTimer.C
-			atomic.AddInt32(&testDone, 1)
-
-			// stop the subscriptions
-			for _, c := range cm.clients {
-				c.completeSubscribers()
-			}
-		}()
-	}
-
 	return cm
 }
 
@@ -664,6 +647,23 @@ func (cm *ClientManager) WaitForCompletion() {
 	cm.subStartedWg.Wait()
 
 	printf("Publishers starting.")
+
+	if cm.config.TestDur != "" {
+		dur, err := time.ParseDuration(cm.config.TestDur)
+		if err != nil {
+			log.Fatalf("Unable to parse duration: %s", dur)
+		}
+		endTimer = time.NewTimer(dur)
+		go func() {
+			<-endTimer.C
+			atomic.AddInt32(&testDone, 1)
+
+			// stop the subscriptions
+			for _, c := range cm.clients {
+				c.completeSubscribers()
+			}
+		}()
+	}
 
 	// subscribers are ready and publishing will commence,
 	// so start measuring throughput
