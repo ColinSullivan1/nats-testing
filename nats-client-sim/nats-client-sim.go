@@ -280,13 +280,16 @@ func (c *Client) errorHandler(nc *nats.Conn, sub *nats.Subscription, err error) 
 
 func (c *Client) connect() error {
 	var err error
+
+	cmcfg := c.cm.config
+
 	opts := nats.DefaultOptions
-	opts.Servers = strings.Split(c.cm.config.ServerURLs, ",")
+	opts.Servers = strings.Split(cmcfg.ServerURLs, ",")
 	for i, s := range opts.Servers {
 		opts.Servers[i] = strings.Trim(s, " ")
 	}
 
-	opts.Secure = c.cm.config.UseTLS
+	opts.Secure = cmcfg.UseTLS
 	opts.AsyncErrorCB = c.errorHandler
 	opts.DisconnectedCB = c.disconnectedHandler
 	opts.ReconnectedCB = c.reconnectedHandler
@@ -295,6 +298,19 @@ func (c *Client) connect() error {
 	opts.Password = c.config.Password
 	opts.Name = c.clientID
 	opts.SubChanLen = 1024 * 1024
+	if cmcfg.TLSClientCA != "" {
+		if err := nats.RootCAs(cmcfg.TLSClientCert)(&opts); err != nil {
+			log.Fatalf("client CA error: %v\n", err)
+		}
+	}
+	if cmcfg.TLSClientCert != "" {
+		if err := nats.ClientCert(cmcfg.TLSClientCert, cmcfg.TLSClientKey)(&opts); err != nil {
+			log.Fatalf("client cert error: %v\n", err)
+		}
+		opts.TLSConfig.InsecureSkipVerify = true
+	}
+	opts.Timeout = c.cm.connectTimeout
+
 	c.nc, err = opts.Connect()
 
 	// if we can't connect via error, keep trying - this is
@@ -545,18 +561,19 @@ func getConfig(jsonString string) (*Config, error) {
 // ClientManager tracks all clients
 type ClientManager struct {
 	sync.Mutex
-	clients       []*Client
-	config        *Config
-	pubCount      int
-	subCount      int
-	subStartedWg  sync.WaitGroup
-	pubDoneWg     sync.WaitGroup
-	subDoneWg     sync.WaitGroup
-	payloadBuffer []byte
-	perfStartTime time.Time
-	perfEndTime   time.Time
-	printInterval int
-	longReport    bool
+	clients        []*Client
+	config         *Config
+	pubCount       int
+	subCount       int
+	subStartedWg   sync.WaitGroup
+	pubDoneWg      sync.WaitGroup
+	subDoneWg      sync.WaitGroup
+	payloadBuffer  []byte
+	perfStartTime  time.Time
+	perfEndTime    time.Time
+	connectTimeout time.Duration
+	printInterval  int
+	longReport     bool
 }
 
 func printClient(c *Client) {
@@ -571,45 +588,30 @@ func printClient(c *Client) {
 func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	var maxMsgSize int
 
-	opts := nats.DefaultOptions
-	opts.Servers = strings.Split(cfg.ServerURLs, ",")
-	for i, s := range opts.Servers {
-		opts.Servers[i] = strings.Trim(s, " ")
-	}
-
-	opts.Secure = true
+	// print out general info
+	// TODO - move this out...
 	if cfg.UseTLS {
 		verbosef("Using TLS.\n")
-		if err := nats.Secure()(&opts); err != nil {
-			log.Fatalf("error enabliing tls: %v\n", err)
-		}
 	}
 	if cfg.TLSClientCA != "" {
 		verbosef("Using client CA %s\n", cfg.TLSClientCA)
-		if err := nats.RootCAs(cfg.TLSClientCert)(&opts); err != nil {
-			log.Fatalf("client CA error: %v\n", err)
-		}
 	}
 	if cfg.TLSClientCert != "" {
 		verbosef("Using client cert: %s\n", cfg.TLSClientCert)
 		verbosef("Using client key: %s\n", cfg.TLSClientKey)
-		if err := nats.ClientCert(cfg.TLSClientCert, cfg.TLSClientKey)(&opts); err != nil {
-			log.Fatalf("client cert error: %v\n", err)
-		}
-		opts.TLSConfig.InsecureSkipVerify = true
-	}
-
-	if cfg.ConnectTimeout != "" {
-		var err error
-		if opts.Timeout, err = time.ParseDuration(cfg.ConnectTimeout); err != nil {
-			log.Fatalf("unable to parse connect_timeout: %v", err)
-		}
 	}
 
 	cm := &ClientManager{}
 	cm.config = cfg
 	cm.printInterval = prIvl
 	cm.longReport = longReport
+
+	if cfg.ConnectTimeout != "" {
+		var err error
+		if cm.connectTimeout, err = time.ParseDuration(cfg.ConnectTimeout); err != nil {
+			log.Fatalf("unable to parse connect_timeout: %v", err)
+		}
+	}
 
 	for i := 0; i < len(cfg.Clients); i++ {
 		for j := 0; j < cfg.Clients[i].Instances; j++ {
