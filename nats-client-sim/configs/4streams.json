@@ -4,6 +4,7 @@
   "duration": "3s",
   "output_file": "4streams_results.json",
   "client_start_delay_max": "250ms",
+  "connect_timeout": "20s",
   "tlsca": "",
   "tlscert": "",
   "tlskey": "",

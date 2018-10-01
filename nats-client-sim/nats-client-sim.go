@@ -72,17 +72,18 @@ func rps(count int64, elapsed time.Duration) int {
 
 // Config is the general test configuration
 type Config struct {
-	Name          string         `json:"name"`
-	ServerURLs    string         `json:"url"`
-	TestDur       string         `json:"duration"`
-	OutputFile    string         `json:"output_file"`
-	PrettyPrint   bool           `json:"prettyprint,omitempty"`
-	MaxStartDelay string         `json:"client_start_delay_max"`
-	TLSClientCA   string         `json:"tlsca"`
-	TLSClientCert string         `json:"tlscert"`
-	TLSClientKey  string         `json:"tlskey"`
-	UseTLS        bool           `json:"usetls"`
-	Clients       []ClientConfig `json:"clients"`
+	Name           string         `json:"name"`
+	ServerURLs     string         `json:"url"`
+	TestDur        string         `json:"duration"`
+	ConnectTimeout string         `json:"connect_timeout"`
+	OutputFile     string         `json:"output_file"`
+	PrettyPrint    bool           `json:"prettyprint,omitempty"`
+	MaxStartDelay  string         `json:"client_start_delay_max"`
+	TLSClientCA    string         `json:"tlsca"`
+	TLSClientCert  string         `json:"tlscert"`
+	TLSClientKey   string         `json:"tlskey"`
+	UseTLS         bool           `json:"usetls"`
+	Clients        []ClientConfig `json:"clients"`
 }
 
 // ClientConfig represents a client
@@ -596,6 +597,13 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 			log.Fatalf("client cert error: %v\n", err)
 		}
 		opts.TLSConfig.InsecureSkipVerify = true
+	}
+
+	if cfg.ConnectTimeout != "" {
+		var err error
+		if opts.Timeout, err = time.ParseDuration(cfg.ConnectTimeout); err != nil {
+			log.Fatalf("unable to parse connect_timeout: %v", err)
+		}
 	}
 
 	cm := &ClientManager{}
