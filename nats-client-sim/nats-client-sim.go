@@ -606,7 +606,9 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 	cm.printInterval = prIvl
 	cm.longReport = longReport
 
-	if cfg.ConnectTimeout != "" {
+	if cfg.ConnectTimeout == "" {
+		cm.connectTimeout = nats.DefaultTimeout
+	} else {
 		var err error
 		if cm.connectTimeout, err = time.ParseDuration(cfg.ConnectTimeout); err != nil {
 			log.Fatalf("unable to parse connect_timeout: %v", err)
