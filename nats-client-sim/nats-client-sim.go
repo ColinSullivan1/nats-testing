@@ -72,18 +72,19 @@ func rps(count int64, elapsed time.Duration) int {
 
 // Config is the general test configuration
 type Config struct {
-	Name           string         `json:"name"`
-	ServerURLs     string         `json:"url"`
-	TestDur        string         `json:"duration"`
-	ConnectTimeout string         `json:"connect_timeout"`
-	OutputFile     string         `json:"output_file"`
-	PrettyPrint    bool           `json:"prettyprint,omitempty"`
-	MaxStartDelay  string         `json:"client_start_delay_max"`
-	TLSClientCA    string         `json:"tlsca"`
-	TLSClientCert  string         `json:"tlscert"`
-	TLSClientKey   string         `json:"tlskey"`
-	UseTLS         bool           `json:"usetls"`
-	Clients        []ClientConfig `json:"clients"`
+	Name                  string         `json:"name"`
+	ServerURLs            string         `json:"url"`
+	TestDur               string         `json:"duration"`
+	ConnectTimeout        string         `json:"connect_timeout"`
+	IntialConnectAttempts int            `json:"initial_connect_attempts"`
+	OutputFile            string         `json:"output_file"`
+	PrettyPrint           bool           `json:"prettyprint,omitempty"`
+	MaxStartDelay         string         `json:"client_start_delay_max"`
+	TLSClientCA           string         `json:"tlsca"`
+	TLSClientCert         string         `json:"tlscert"`
+	TLSClientKey          string         `json:"tlskey"`
+	UseTLS                bool           `json:"usetls"`
+	Clients               []ClientConfig `json:"clients"`
 }
 
 // ClientConfig represents a client
@@ -116,6 +117,7 @@ func GenerateDefaultConfigFile() ([]byte, error) {
 	cfg.TestDur = "10s"
 	cfg.OutputFile = "results.json"
 	cfg.PrettyPrint = true
+	cfg.IntialConnectAttempts = 10
 
 	cfg.Clients = make([]ClientConfig, 2)
 
@@ -313,10 +315,15 @@ func (c *Client) connect() error {
 
 	c.nc, err = opts.Connect()
 
+	attempts := c.cm.config.IntialConnectAttempts
+	if attempts == 0 {
+		attempts = 1
+	}
+
 	// if we can't connect via error, keep trying - this is
 	// a stress test.
 	if err != nil {
-		for i := 0; i < 100; i++ {
+		for i := 0; i < attempts; i++ {
 			printf("%s:  retrying initial connect to %s.  %v\n", c.clientID, opts.Servers, err)
 			time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond)
 			c.nc, err = opts.Connect()
