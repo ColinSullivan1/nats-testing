@@ -5,6 +5,8 @@
   "output_file": "simple_results.json",
   "prettyprint": true,
   "client_start_delay_max": "1s",
+  "connect_timeout": "5s",
+  "initial_connect_attempts": 10,
   "tlsca": "",
   "tlscert": "",
   "tlskey": "",

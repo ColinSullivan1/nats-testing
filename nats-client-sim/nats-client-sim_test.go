@@ -101,7 +101,7 @@ func getSummary(t *testing.T, fname string) *JSONOutput {
 	return &ar
 }
 
-func checkBasicResults(t *testing.T, sr *SummaryRecord, numClients, numPubs, numSubs, minMsgsSent, minMsgsRecv int) {
+func checkBasicResults(t *testing.T, sr *SummaryRecord, numClients, numPubs, numSubs, minMsgsSent, minMsgsRecv, errors int) {
 	if sr.NumClients != numClients {
 		t.Fatalf("unexpected number of clients: %d vs %d", sr.NumClients, numClients)
 	}
@@ -120,11 +120,13 @@ func checkBasicResults(t *testing.T, sr *SummaryRecord, numClients, numPubs, num
 	if sr.TotalAsErrors != 0 {
 		t.Fatalf("unexpected number of async errors: %d", sr.TotalAsErrors)
 	}
-	if sr.TotalErrors != 0 {
+	if sr.TotalErrors != errors {
 		t.Fatalf("unexpected number of errors: %d", sr.TotalErrors)
 	}
-	if sr.TotalDisconnects != sr.NumClients {
-		t.Fatalf("unexpected number of disconnects: %d vs %d", sr.TotalDisconnects, sr.NumClients)
+	if sr.TotalErrors == 0 {
+		if sr.TotalDisconnects != sr.NumClients {
+			t.Fatalf("unexpected number of disconnects: %d vs %d", sr.TotalDisconnects, sr.NumClients)
+		}
 	}
 }
 
@@ -133,7 +135,7 @@ func Test_run_simple(t *testing.T) {
 	defer s.Shutdown()
 	run("configs/simple.json", false, false, false, 0)
 	results := getSummary(t, "./simple_results.json")
-	checkBasicResults(t, results.Summary, 1, 1, 1, 3000, 3000)
+	checkBasicResults(t, results.Summary, 1, 1, 1, 3000, 3000, 0)
 	os.Remove("./simple_results.json")
 }
 
@@ -142,7 +144,7 @@ func Test_run_streams(t *testing.T) {
 	defer s.Shutdown()
 	run("configs/4streams.json", false, false, false, 0)
 	results := getSummary(t, "./4streams_results.json")
-	checkBasicResults(t, results.Summary, 8, 4, 4, 4000, 4000)
+	checkBasicResults(t, results.Summary, 8, 4, 4, 4000, 4000, 0)
 	os.Remove("./4streams_results.json")
 }
 
@@ -151,6 +153,13 @@ func Test_run_fanout_1to100(t *testing.T) {
 	defer s.Shutdown()
 	run("configs/fanout_1to100.json", false, false, false, 0)
 	results := getSummary(t, "./fanout_1to100_results.json")
-	checkBasicResults(t, results.Summary, 101, 1, 100, 1000, 100000)
+	checkBasicResults(t, results.Summary, 101, 1, 100, 1000, 100000, 0)
 	os.Remove("fanout_1to100_results.json")
+}
+
+func Test_run_NoServer(t *testing.T) {
+	run("configs/simple.json", false, false, false, 0)
+	results := getSummary(t, "./simple_results.json")
+	checkBasicResults(t, results.Summary, 1, 1, 1, 0, 0, 1)
+	os.Remove("./simple_results.json")
 }

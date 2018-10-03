@@ -175,7 +175,6 @@ func LoadConfiguration(filename string) (*Config, error) {
 
 // Client represents a NATS streaming client
 type Client struct {
-	sync.Mutex
 	cm             *ClientManager
 	config         *ClientConfig
 	testconfig     *Config
@@ -192,7 +191,7 @@ type Client struct {
 	pubStopTime    time.Time
 	subCh          chan (bool)
 	subs           []*ClientSub
-	done           bool
+	closed         int32 // atomic to avoid locking
 	asCount        int32 // async error count
 	dcCount        int32 // disconnect count
 	rcCount        int32 // reconnect count
@@ -338,6 +337,7 @@ func (c *Client) connect() error {
 func (c *Client) close() {
 	c.closeSubscriptions()
 	c.nc.Close()
+	c.setClosed()
 }
 
 func (c *Client) completeSubscribers() {
@@ -490,7 +490,7 @@ func (c *Client) GetPublishCount() int64 {
 // GetPublishActualMsgsPerSec returns the actual (not configured) msgs/sec
 func (c *Client) GetPublishActualMsgsPerSec() int {
 	count := atomic.LoadInt64(&c.publishCount)
-	if c.done == false {
+	if !c.isClosed() {
 		return rps(count, time.Now().Sub(c.pubStartTime))
 	}
 
@@ -512,13 +512,35 @@ func (c *Client) startDelay() {
 	}
 }
 
-// Run connects a client to to the NATS server, starts the subscribers, then
+func (c *Client) isClosed() bool {
+	return atomic.LoadInt32(&c.closed) == 1
+}
+
+func (c *Client) setClosed() {
+	atomic.StoreInt32(&c.closed, 1)
+}
+
+// Run connects a client to to the NATS server, starts the subscribers
+// and publishes messages.
 func (c *Client) Run() error {
 
 	c.startDelay()
 
 	if err := c.connect(); err != nil {
-		log.Fatalf("%s:  unable to connect: %v", c.clientID, err)
+		c.errCount++
+
+		// for automated tests, we want a summary of the failures, so remove
+		// the client from action.
+		if c.isSubscriber() {
+			c.cm.subStartedWg.Done()
+			c.cm.subDoneWg.Done()
+		}
+		if c.isPublisher() {
+			c.cm.pubDoneWg.Done()
+		}
+		c.setClosed()
+		verbosef("%s:  unable to connect: %v", c.clientID, err)
+		return nil
 	}
 
 	verbosef("%s: Connected.", c.clientID)
@@ -538,10 +560,6 @@ func (c *Client) Run() error {
 		c.waitForSubscriptions()
 	}
 	c.close()
-
-	c.Lock()
-	c.done = true
-	c.Unlock()
 
 	return nil
 }
@@ -732,9 +750,7 @@ func (cm *ClientManager) displayClientsAndRates(activeOnly bool) {
 	}
 
 	for _, c := range cm.clients {
-		c.Lock()
-		done := c.done
-		c.Unlock()
+		done := c.isClosed()
 
 		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2016-04-08 15:04:05"), c.clientID)
 		if c.isPublisher() {
