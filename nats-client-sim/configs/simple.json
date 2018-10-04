@@ -6,7 +6,7 @@
   "prettyprint": true,
   "client_start_delay_max": "1s",
   "connect_timeout": "5s",
-  "initial_connect_attempts": 10,
+  "initial_connect_attempts": 2,
   "tlsca": "",
   "tlscert": "",
   "tlskey": "",

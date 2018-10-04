@@ -196,6 +196,9 @@ type Client struct {
 	dcCount        int32 // disconnect count
 	rcCount        int32 // reconnect count
 	errCount       int32 // other error count (publish/flush)
+	connAttempts   int   // # of initial connection attempts
+	connSuccess    bool
+	connCreateDur  time.Duration // amount of time it takes to connect
 }
 
 // ClientSub is a client subscription
@@ -311,26 +314,31 @@ func (c *Client) connect() error {
 		opts.TLSConfig.InsecureSkipVerify = true
 	}
 	opts.Timeout = c.cm.connectTimeout
-
-	c.nc, err = opts.Connect()
-
 	attempts := c.cm.config.IntialConnectAttempts
-	if attempts == 0 {
+	if attempts <= 0 {
 		attempts = 1
 	}
 
-	// if we can't connect via error, keep trying - this is
-	// a stress test.
-	if err != nil {
-		for i := 0; i < attempts; i++ {
-			printf("%s:  retrying initial connect to %s.  %v\n", c.clientID, opts.Servers, err)
-			time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond)
-			c.nc, err = opts.Connect()
-			if err == nil {
-				break
-			}
+	for i := 0; i < attempts; i++ {
+		c.connAttempts++
+		start := time.Now()
+		c.nc, err = opts.Connect()
+		if err == nil {
+			c.connCreateDur = time.Since(start)
+			c.connSuccess = true
+			break
 		}
+		verbosef("%s:  attempt %d to connect to %s failed: %v\n", c.clientID, c.connAttempts, opts.Servers, err)
+		time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond)
 	}
+
+	if err != nil {
+		printf("%s:  failed to connect: %v\n", c.clientID, err)
+	}
+
+	// connected or not,we're done waiting for this client.
+	c.cm.connectedWg.Done()
+
 	return err
 }
 
@@ -586,19 +594,19 @@ func getConfig(jsonString string) (*Config, error) {
 // ClientManager tracks all clients
 type ClientManager struct {
 	sync.Mutex
-	clients        []*Client
-	config         *Config
-	pubCount       int
-	subCount       int
-	subStartedWg   sync.WaitGroup
-	pubDoneWg      sync.WaitGroup
-	subDoneWg      sync.WaitGroup
-	payloadBuffer  []byte
-	perfStartTime  time.Time
-	perfEndTime    time.Time
-	connectTimeout time.Duration
-	printInterval  int
-	longReport     bool
+	clients             []*Client
+	config              *Config
+	pubCount            int
+	subCount            int
+	connectedWg         sync.WaitGroup
+	subStartedWg        sync.WaitGroup
+	pubDoneWg           sync.WaitGroup
+	subDoneWg           sync.WaitGroup
+	payloadBuffer       []byte
+	perfStartTime       time.Time
+	perfEndTime         time.Time
+	connectTimeout      time.Duration
+	printDetailedReport bool
 }
 
 func printClient(c *Client) {
@@ -609,8 +617,19 @@ func printClient(c *Client) {
 		len(c.config.Subscriptions))
 }
 
+func parseConnectTimeout(connTimeout string) time.Duration {
+	if connTimeout == "" {
+		return nats.DefaultTimeout
+	}
+	timeOut, err := time.ParseDuration(connTimeout)
+	if err != nil {
+		log.Fatalf("unable to parse connect_timeout: %v", err)
+	}
+	return timeOut
+}
+
 // NewClientManager creates a client manager
-func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
+func NewClientManager(cfg *Config, detailedReport bool) *ClientManager {
 	var maxMsgSize int
 
 	// print out general info
@@ -626,18 +645,10 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 		verbosef("Using client key: %s\n", cfg.TLSClientKey)
 	}
 
-	cm := &ClientManager{}
-	cm.config = cfg
-	cm.printInterval = prIvl
-	cm.longReport = longReport
-
-	if cfg.ConnectTimeout == "" {
-		cm.connectTimeout = nats.DefaultTimeout
-	} else {
-		var err error
-		if cm.connectTimeout, err = time.ParseDuration(cfg.ConnectTimeout); err != nil {
-			log.Fatalf("unable to parse connect_timeout: %v", err)
-		}
+	cm := &ClientManager{
+		config:              cfg,
+		printDetailedReport: detailedReport,
+		connectTimeout:      parseConnectTimeout(cfg.ConnectTimeout),
 	}
 
 	for i := 0; i < len(cfg.Clients); i++ {
@@ -669,6 +680,7 @@ func NewClientManager(cfg *Config, prIvl int, longReport bool) *ClientManager {
 
 // RunClients runs all the configured clients
 func (cm *ClientManager) RunClients() {
+	cm.connectedWg.Add(len(cm.clients))
 	cm.subStartedWg.Add(cm.subCount)
 	cm.pubDoneWg.Add(cm.pubCount)
 	cm.subDoneWg.Add(cm.subCount)
@@ -681,6 +693,7 @@ func (cm *ClientManager) RunClients() {
 
 // WaitForCompletion waits until all clients have been completed.
 func (cm *ClientManager) WaitForCompletion() {
+	cm.connectedWg.Wait()
 	cm.subStartedWg.Wait()
 
 	printf("Publishers starting.")
@@ -705,26 +718,11 @@ func (cm *ClientManager) WaitForCompletion() {
 	// subscribers are ready and publishing will commence,
 	// so start measuring throughput
 	cm.perfStartTime = time.Now()
-
-	cm.StartClientReporting()
-
 	cm.pubDoneWg.Wait()
 	cm.subDoneWg.Wait()
 	cm.perfEndTime = time.Now()
 
 	printf("All clients finished.")
-}
-
-// StartClientReporting the status of the current test
-func (cm *ClientManager) StartClientReporting() {
-	if cm.printInterval > 0 {
-		go func() {
-			for {
-				time.Sleep(time.Duration(cm.printInterval) * time.Second)
-				cm.displayClientsAndRates(true)
-			}
-		}()
-	}
 }
 
 func (cm *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int64) {
@@ -736,25 +734,16 @@ func (cm *ClientManager) printAggregateMsgRate(msgsSent, msgsRecv int64) {
 	printf("Received aggregate %d msgs at %d msgs/sec.\n", msgsRecv, int(mrRate))
 }
 
-func (cm *ClientManager) displayClientsAndRates(activeOnly bool) {
+func (cm *ClientManager) displayClientsAndRates() {
 	var line string
 	var count int
-	var tsent int64
-	var trecv int64
 
 	cm.Lock()
 	defer cm.Unlock()
 
-	if activeOnly {
-		printf("=== Only Active Clients are Shown.")
-	}
-
 	for _, c := range cm.clients {
-		done := c.isClosed()
-
 		line = fmt.Sprintf("%v: Client %s,", time.Now().Format("2016-04-08 15:04:05"), c.clientID)
 		if c.isPublisher() {
-			tsent += c.GetPublishCount()
 			line += fmt.Sprintf(" pub: %s=(%d/%d),(%d msgs/sec)", c.config.PublishSubject,
 				c.GetPublishCount(), c.config.PubMsgCount, c.GetPublishActualMsgsPerSec())
 		}
@@ -762,21 +751,14 @@ func (cm *ClientManager) displayClientsAndRates(activeOnly bool) {
 		if c.isSubscriber() {
 			line += " subs:"
 			for _, csub := range c.subs {
-				trecv += csub.GetReceivedCount()
 				line += fmt.Sprintf(" %s=(%d/%d),(%d msgs/sec)", csub.subject,
 					csub.GetReceivedCount(), csub.max, csub.GetSubActualMsgsPerSec())
 			}
 		}
 
-		if cm.longReport {
-			if !activeOnly || (activeOnly && !done) {
-				log.Printf("%s\n", line)
-			}
-		}
+		log.Printf("%s\n", line)
 		count++
 	}
-
-	cm.printAggregateMsgRate(tsent, trecv)
 }
 
 // displayClientsAndRates runs a report of current active clients
@@ -814,35 +796,59 @@ type SummaryRecord struct {
 	CfgDuration       string `json:"duration"`
 	ActDuration       string `json:"active_duration"`
 	TLS               bool   `json:"tls"`
-	TotalErrors       int    `json:"error_count"`
-	TotalDisconnects  int    `json:"disconnect_count"`
-	TotalAsErrors     int    `json:"as_error_count"`
-	TotalReconnects   int    `json:"reconnect_count"`
 	NumClients        int    `json:"client_count"`
 	NumPublishers     int    `json:"pub_count"`
 	NumSubscribers    int    `json:"sub_count"`
+	TotalErrors       int    `json:"error_count"`
+	TotalDisconnects  int    `json:"disconnect_count"`
+	TotalAsErrors     int    `json:"as_error_count"`
+	TotalConnects     int    `json:"connect_count"`
+	TotalReconnects   int    `json:"reconnect_count"`
 	TotalMessagesSent int    `json:"msgs_sent"`
 	TotalMessagesRecv int    `json:"msgs_recv"`
+	AvgConnAttempts   int    `json:"avg_conn_attempts"`
+	AvgConnConnectDur string `json:"avg_conn_connect_dur"`
+}
+
+func avgDurs(v *[]time.Duration) string {
+	var ttl time.Duration
+	count := len(*v)
+	if count == 0 {
+		return "0s"
+	}
+	for _, d := range *v {
+		ttl += d
+	}
+	return (ttl / time.Duration(count)).String()
 }
 
 // NewSummaryRecord generates a new summary record for writing
 func (cm *ClientManager) NewSummaryRecord() *SummaryRecord {
 	var (
-		asCount  int // async error count
-		dcCount  int // disconnect count
-		rcCount  int // reconnect count
-		errCount int // other error count (publish/flush)
-		numPubs  int // number of publishers
-		numSubs  int // number of subscribers
-		tSent    int // number of sent messages
-		tRecv    int // number of recv messages
+		asCount       int // async error count
+		dcCount       int // disconnect count
+		rcCount       int // reconnect count
+		errCount      int // other error count (publish/flush)
+		tConnAttempts int // connection attempts
+		tConnections  int // connection successes
+		numPubs       int // number of publishers
+		numSubs       int // number of subscribers
+		tSent         int // number of sent messages
+		tRecv         int // number of recv messages
 	)
 
+	var durs []time.Duration
 	for _, c := range cm.clients {
 		asCount += int(c.asCount)
 		dcCount += int(c.dcCount)
 		rcCount += int(c.rcCount)
 		errCount += int(c.errCount)
+		tConnAttempts += c.connAttempts
+
+		if c.connSuccess {
+			tConnections++
+			durs = append(durs, c.connCreateDur)
+		}
 
 		if c.isPublisher() {
 			numPubs++
@@ -862,8 +868,9 @@ func (cm *ClientManager) NewSummaryRecord() *SummaryRecord {
 		TestName:          cm.config.Name,
 		Hostname:          hostname,
 		CfgDuration:       cm.config.TestDur,
-		ActDuration:       fmt.Sprintf("%v", cm.perfEndTime.Sub(cm.perfStartTime).Seconds()),
+		ActDuration:       cm.perfEndTime.Sub(cm.perfStartTime).String(),
 		TLS:               cm.config.UseTLS,
+		TotalConnects:     tConnections,
 		TotalErrors:       errCount,
 		TotalDisconnects:  dcCount,
 		TotalReconnects:   rcCount,
@@ -873,6 +880,8 @@ func (cm *ClientManager) NewSummaryRecord() *SummaryRecord {
 		NumSubscribers:    numSubs,
 		TotalMessagesSent: tSent,
 		TotalMessagesRecv: tRecv,
+		AvgConnConnectDur: avgDurs(&durs),
+		AvgConnAttempts:   tConnAttempts / len(cm.clients),
 	}
 	return sr
 }
@@ -889,6 +898,8 @@ type ClientRecord struct {
 	Type              string      `json:"type"`
 	Name              string      `json:"name"`
 	Instance          int         `json:"instance"`
+	ConnectAttempts   int         `json:"conn_attempts"`
+	ConnectTime       string      `json:"connect_time"`
 	Errors            int         `json:"error_count"`
 	Reconnects        int         `json:"reconnect_count"`
 	Disconnects       int         `json:"disconnect_count"`
@@ -906,16 +917,17 @@ func (cm *ClientManager) NewClientRecord(c *Client) *ClientRecord {
 	var trecv int
 
 	cr := &ClientRecord{
-		Type:           "client",
-		Name:           c.config.Name,
-		Instance:       c.instance,
-		Errors:         int(c.errCount),
-		Reconnects:     int(c.rcCount),
-		AsyncErrors:    int(c.asCount),
-		PublishRate:    c.GetPublishActualMsgsPerSec(),
-		MessagesSent:   int(c.publishCount),
-		PublishSubj:    c.publishSubject,
-		NumSubscribers: len(c.subs),
+		Type:            "client",
+		Name:            c.config.Name,
+		Instance:        c.instance,
+		ConnectAttempts: int(c.connAttempts),
+		Errors:          int(c.errCount),
+		Reconnects:      int(c.rcCount),
+		AsyncErrors:     int(c.asCount),
+		PublishRate:     c.GetPublishActualMsgsPerSec(),
+		MessagesSent:    int(c.publishCount),
+		PublishSubj:     c.publishSubject,
+		NumSubscribers:  len(c.subs),
 	}
 
 	scount := len(c.subs)
@@ -997,7 +1009,7 @@ func (cm *ClientManager) writeOutputFile() error {
 		return nil
 	}
 
-	printf("Writing output file.\n")
+	printf("Writing output file %q.\n", of)
 
 	f, err := os.Create(of)
 	if err != nil {
@@ -1034,7 +1046,7 @@ func (cm *ClientManager) printBanner() {
 }
 
 // run runs the application
-func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl int) {
+func run(configFile string, isVerbose, isTraceVerbose, longReport bool) {
 	var err error
 
 	// for testing
@@ -1055,17 +1067,16 @@ func run(configFile string, isVerbose, isTraceVerbose, longReport bool, prIvl in
 		log.Fatalf("error loading configuration file:  %v\n", err)
 	}
 
-	cman := NewClientManager(cfg, prIvl, longReport)
+	cman := NewClientManager(cfg, longReport)
 	cman.printBanner()
 	cman.RunClients()
 	cman.WaitForCompletion()
 	endTimer.Stop()
 
 	if longReport {
-		cman.displayClientsAndRates(false)
-	} else {
-		cman.displayRates()
+		cman.displayClientsAndRates()
 	}
+	cman.displayRates()
 
 	printf("Test complete.")
 	if err := cman.writeOutputFile(); err != nil {
@@ -1077,11 +1088,10 @@ func main() {
 	var configFile = flag.String("config", DefaultConfigFileName, "configuration file to use.  Default is generated.")
 	var vb = flag.Bool("V", false, "Verbose")
 	var tb = flag.Bool("DV", false, "Verbose/Trace")
-	var pr = flag.Int("report", 0, "Print an active client report every X seconds")
-	var lf = flag.Bool("lr", false, "Print a long form of report data.")
+	var pr = flag.Bool("report", false, "Print a long form of report data.")
 
 	log.SetFlags(0)
 	flag.Parse()
 
-	run(*configFile, *vb, *tb, *lf, *pr)
+	run(*configFile, *vb, *tb, *pr)
 }
