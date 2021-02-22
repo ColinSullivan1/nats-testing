@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	gnatsd "github.com/nats-io/nats-server/server"
 	"github.com/nats-io/nats.go"
@@ -144,7 +145,7 @@ func printServerRSS(monURL string, subcount int) error {
 		firstPrint = true
 		log.Printf("subcount, mem(rss)")
 	}
-	log.Printf("%d, %d\n", subcount, varz.Mem)
+	log.Printf("%s: %d, %d\n", time.Now().Format("2001-01-02 15:04:05"), subcount, varz.Mem)
 
 	return nil
 }
