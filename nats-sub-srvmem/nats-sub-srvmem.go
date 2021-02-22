@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	gnatsd "github.com/nats-io/gnatsd/server"
-	"github.com/nats-io/go-nats"
+	gnatsd "github.com/nats-io/nats-server/server"
+	"github.com/nats-io/nats.go"
 )
 
 // Quick and dirty app to read self reported memory from a server
